@@ -561,7 +561,33 @@
       Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
     }
 
-    loadState();
+    // Check for selected template from template-select page
+    const selectedTemplateId = Utils.store.get("dc_selected_template");
+    if (selectedTemplateId) {
+      const template = DemoData.getTemplate(selectedTemplateId);
+      if (template) {
+        // Apply template theme
+        shop.theme = template.theme;
+        Utils.store.set("dc_shop", shop);
+        if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
+
+        // Load template sections
+        sections = template.sections.map((s, i) => ({
+          id: Utils.uid(),
+          type: s.type,
+          title: s.title,
+          visible: s.visible !== false,
+          ...s
+        }));
+        Utils.store.set("dc_builder_sections", sections);
+        toast("success", `${template.name} template loaded!`);
+        // Clear template selection so it doesn't reload on refresh
+        Utils.store.remove("dc_selected_template");
+      }
+    } else {
+      loadState();
+    }
+
     renderLibrary();
     renderThemeControls();
     applyThemeToCanvas();
