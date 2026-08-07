@@ -23,12 +23,35 @@
     DemoData.getOrders(user.id),
     DemoData.getCustomers(user.id),
   ]);
-  const analytics = DemoData.getAnalytics();
+
+  // Build analytics from real orders data (last 30 days)
+  const analytics = buildAnalyticsFromOrders(orders);
 
   const totalRevenue = orders.filter(o => ["paid", "shipped"].includes(o.status)).reduce((s, o) => s + o.total, 0);
   const revenueToday = analytics.reduce((s, d) => d.date === new Date().toISOString().slice(0, 10) ? s + d.revenue : s, 0);
   const prevRevenue = totalRevenue * 0.82;
   const revDelta = Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100);
+
+  /* ---------- Build analytics from real orders (last 30 days) ---------- */
+  function buildAnalyticsFromOrders(orders) {
+    const byDate = {};
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      byDate[key] = { date: key, revenue: 0, orders: 0, visitors: 0 };
+    }
+    orders.forEach(o => {
+      if (!["paid", "shipped"].includes(o.status)) return;
+      const day = o.created_at?.slice(0, 10);
+      if (byDate[day]) {
+        byDate[day].revenue += o.total;
+        byDate[day].orders += 1;
+      }
+    });
+    return Object.values(byDate);
+  }
 
   /* ---------- Stats ---------- */
   const statIcons = {
@@ -66,7 +89,7 @@
     labels,
     series: [
       { values: analytics.map(d => d.revenue), color: "#5C6EFF", area: true },
-      { values: analytics.map(d => d.orders * 900), color: "#00C896", area: false },
+      { values: analytics.map(d => d.orders * (analytics.reduce((s, a) => s + a.revenue, 0) / Math.max(1, analytics.reduce((s, a) => s + a.orders, 0))) || 900), color: "#00C896", area: false },
     ],
     format: (v) => "PKR " + Utils.fmtShort(v),
   });
@@ -125,9 +148,7 @@
   /* ---------- Activity (derived from real orders; empty state when none) ---------- */
   const actIcons = {
     order: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2z"/></svg>', "#5C6EFF"],
-    visitor: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>', "#7C4DFF"],
     sale: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></svg>', "#00C896"],
-    tip: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>', "#F59E0B"],
   };
   const actRows = orders.slice(0, 5).map(o => [
     "order", "New order received", `${o.customer_name} · ${o.items.length} item${o.items.length === 1 ? "" : "s"} · ${Utils.fmtMoney(o.total)}`, o.created_at,
@@ -169,7 +190,7 @@
       labels,
       series: [
         { values: analytics.map(d => d.revenue), color: "#5C6EFF", area: true },
-        { values: analytics.map(d => d.orders * 900), color: "#00C896", area: false },
+        { values: analytics.map(d => d.orders * (analytics.reduce((s, a) => s + a.revenue, 0) / Math.max(1, analytics.reduce((s, a) => s + a.orders, 0))) || 900), color: "#00C896", area: false },
       ],
       format: (v) => "PKR " + Utils.fmtShort(v),
     });
