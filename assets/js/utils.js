@@ -252,8 +252,10 @@ const Utils = (() => {
   const isSignedIn = async () => {
     if (window.supa) {
       try {
-        const { data } = await window.supa.auth.getUser();
-        return !!data?.user;
+        // getSession() reads the persisted session from localStorage —
+        // NO network call, so it never fails on flaky networks.
+        const { data } = await window.supa.auth.getSession();
+        if (data?.session?.user) return true;
       } catch (err) {
         console.warn("[DualCore] isSignedIn → demo check:", err?.message || err);
       }

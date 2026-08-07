@@ -5,30 +5,65 @@
 const Auth = (() => {
   const { db, store, isSignedIn } = Utils;
 
-  /* ---------- Session persistence (Google/remember-me friendly) ---------- */
+  const toUser = (u) => u ? {
+    id: u.id,
+    email: u.email,
+    name: u.user_metadata?.name || u.email?.split("@")[0] || "Store Owner",
+    created_at: u.created_at || new Date().toISOString(),
+  } : null;
+
+  const mirrorUser = (u) => {
+    const meta = toUser(u);
+    store.set("dc_user", meta);
+    store.set("dc_session", meta);
+  };
+
+  /* ---------- Session persistence (keeps local mirror in sync) ---------- */
   const persist = () => {
+    if (!window.supa || !window.supa.auth.onAuthStateChange) return;
+    window.supa.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        store.remove("dc_user");
+        store.remove("dc_session");
+      } else if (session?.user) {
+        mirrorUser(session.user);
+      }
+    });
+  };
+
+  /* ---------- Restore session (local-first, no network dependency) ---------- */
+  const restoreSession = async () => {
     if (!window.supa) return;
-    const enabled = store.get("dc_remember");
-    if (enabled && window.supa.auth.onAuthStateChange) {
-      window.supa.auth.onAuthStateChange(() => {});
-    }
+    try {
+      const { data } = await window.supa.auth.getSession();
+      if (data?.session?.user) mirrorUser(data.session.user);
+    } catch { /* fall through — mirror/local user saved earlier */ }
+    // Fire onAuthStateChange AFTER initial load so events keep mirror fresh
+    persist();
   };
 
   const getUser = async () => {
     if (window.supa) {
+      // 1) mirror first (instant, local) — never bounces the user
+      const mirror = store.get("dc_session") || store.get("dc_user");
+      if (mirror?.id) return mirror;
+      // 2) ask Supabase (network) only when no mirror exists
       try {
-        const { data, error } = await window.supa.auth.getUser();
-        if (error || !data?.user) { Utils.store.remove("dc_user"); return null; }
-        const u = data.user;
-        const userMeta = { email: u.email, name: u.user_metadata?.name || u.email?.split("@")[0] || "User", id: u.id };
-        return userMeta;
-      } catch { return null; }
+        const { data } = await window.supa.auth.getSession();
+        if (data?.session?.user) { mirrorUser(data.session.user); return toUser(data.session.user); }
+        const { data: ud, error } = await window.supa.auth.getUser();
+        if (!error && ud?.user) { mirrorUser(ud.user); return toUser(ud.user); }
+      } catch { /* demo fallback below */ }
+      return Utils.getLocalUser();
     }
     return Utils.getLocalUser();
   };
 
   const getSession = async () => {
-    if (window.supa) { const { data } = await window.supa.auth.getSession(); return data.session; }
+    if (window.supa) {
+      try { const { data } = await window.supa.auth.getSession(); return data.session; }
+      catch { return null; }
+    }
     return Utils.getLocalUser() ? { user: Utils.getLocalUser(), access_token: "local" } : null;
   };
 
@@ -40,6 +75,7 @@ const Auth = (() => {
         options: { data: { name }, emailRedirectTo: location.origin + "/dashboard.html" },
       });
       if (error) throw new Error(error.message);
+      if (data.session?.user) mirrorUser(data.session.user);
       return { data, needsVerification: !(data.session || data.user?.email_confirmed_at) };
     }
     // Demo mode
@@ -58,6 +94,7 @@ const Auth = (() => {
     if (window.supa) {
       const { data, error } = await window.supa.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
+      if (data.session?.user) mirrorUser(data.session.user);
       return data.user;
     }
     const users = Utils.store.get("dc_users", []);
@@ -113,7 +150,7 @@ const Auth = (() => {
 
   /* ---------- Sign out ---------- */
   const signOut = async () => {
-    if (window.supa) { const { error } = await window.supa.auth.signOut(); if (error) console.error(error); }
+    if (window.supa) { try { await window.supa.auth.signOut(); } catch (e) { console.error(e); } }
     Utils.store.remove("dc_user");
     Utils.store.remove("dc_session");
     Utils.store.remove("dc_shop");
@@ -163,7 +200,15 @@ const Auth = (() => {
     getUser, getSession, signIn, signUp, signInOAuth,
     resetPassword, updatePassword, sendMagicLink, signOut,
     dbNewUser, newUser, getSubscription, planPaid, trialValid, canPublish, canUseCheckout,
+    restoreSession,
   };
 })();
 
 window.Auth = Auth;
+
+/* ---------- Bootstrap: restore session into the local mirror ---------- */
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => Auth.restoreSession());
+} else {
+  Auth.restoreSession();
+}
