@@ -33,7 +33,7 @@
     lock.classList.remove("hidden");
     const left = Utils.daysLeft(sub.end_date);
     $("#planLockText").textContent = left > 0
-      ? `Your free trial ends in ${left} day${left === 1 ? "" : "s"}. Upgrade to Basic (PKR 300/mo) to put your store live with a custom domain and checkout.`
+      ? `Your free trial ends in ${left} day${left === 1 ? "" : "s"}. Upgrade to Basic (PKR 300/mo) to publish your store with checkout.`
       : "Your trial has ended. Upgrade to Basic (PKR 300/mo) to publish your store. Your design is saved and waiting.";
     $("#deployStatus").textContent = "Locked";
   }
