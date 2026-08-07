@@ -33,7 +33,8 @@
       }
     }
     // Fallback to localStorage
-    return Utils.store.get("dc_builder_sections") || DemoData.defaultSections(shop.theme);
+    const local = Utils.store.get("dc_builder_sections");
+    return (local && Array.isArray(local) && local.length > 0) ? local : DemoData.defaultSections(shop.theme);
   };
 
   const products = await DemoData.getProducts(user.id);

@@ -97,7 +97,7 @@
 
   const loadState = () => {
     const saved = Utils.store.get("dc_builder_sections");
-    if (saved && Array.isArray(saved)) sections = saved;
+    if (saved && Array.isArray(saved) && saved.length > 0) sections = saved;
     else {
       sections = DemoData.defaultSections();
       Utils.store.set("dc_builder_sections", sections);
