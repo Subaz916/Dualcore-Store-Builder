@@ -379,7 +379,11 @@
     const shopList = await Utils.db.select("stores", { limit: 1 });
     const shop = shopList[0] || {};
     Utils.store.set("dc_shop", shop);
-    products = await DemoData.getProducts(user.id);
+    try {
+      products = await DemoData.getProducts(user.id);
+    } catch {
+      products = [];
+    }
 
     renderSidebar("builder");
     renderTopbar("Store Builder", "Design your storefront");
