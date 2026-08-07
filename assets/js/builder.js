@@ -588,6 +588,8 @@
       loadState();
     }
 
+    renderBuilderTemplates();
+
     renderLibrary();
     renderThemeControls();
     applyThemeToCanvas();
@@ -623,7 +625,7 @@
       tab.onclick = () => {
         $$("#builderTabs .tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-        ["sections", "theme", "settings"].forEach(p => $("#panel" + p[0].toUpperCase() + p.slice(1)).style.display = p === tab.dataset.tab ? "block" : "none");
+        ["sections", "theme", "templates", "settings"].forEach(p => $("#panel" + p[0].toUpperCase() + p.slice(1)).style.display = p === tab.dataset.tab ? "block" : "none");
       };
     });
 
@@ -688,6 +690,94 @@
     });
 
     save();
+  };
+
+  /* ---------- Builder Templates ---------- */
+  const renderBuilderTemplates = () => {
+    const TEMPLATES = DemoData.getTemplates();
+    const categories = ["all", ...new Set(TEMPLATES.map(t => t.category))];
+    
+    const wrapFilters = $("#builderTemplateFilters");
+    if(wrapFilters) {
+      wrapFilters.innerHTML = categories.map(c => 
+        `<button class="chip ${c === 'all' ? 'active' : ''}" data-cat="${c}">${c}</button>`
+      ).join("");
+
+      wrapFilters.querySelectorAll(".chip").forEach(ch => {
+        ch.onclick = () => {
+          wrapFilters.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
+          ch.classList.add("active");
+          renderTemplateGrid(ch.dataset.cat, $("#builderTemplateSearch")?.value || "");
+        };
+      });
+    }
+
+    const renderTemplateGrid = (cat = "all", q = "") => {
+      const grid = $("#builderTemplateGrid");
+      if(!grid) return;
+      const list = TEMPLATES.filter(t => {
+        const matchCat = cat === "all" || t.category === cat;
+        const matchQ = t.name.toLowerCase().includes(q.toLowerCase()) || t.description.toLowerCase().includes(q.toLowerCase());
+        return matchCat && matchQ;
+      });
+
+      grid.innerHTML = list.map(t => {
+        const theme = Storefront.getTheme(t.theme);
+        return \`
+        <div class="card card-hover theme-card reveal" data-template="\${t.id}" style="padding:0;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border)">
+          <div class="theme-preview" style="background:linear-gradient(135deg, \${theme.soft}, \${theme.accent}22);padding:16px;text-align:center;position:relative;min-height:140px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+            <div style="font-size:3rem;margin-bottom:8px">\${t.thumbnail}</div>
+            <span class="chip" style="background:\${theme.accent};color:#fff;border:none;font-weight:700;font-size:.6rem;padding:3px 8px;border-radius:8px">\${t.category}</span>
+          </div>
+          <div class="theme-body" style="padding:16px;flex:1;display:flex;flex-direction:column">
+            <div>
+              <h3 style="font-size:1rem;margin-bottom:4px">\${t.name}</h3>
+              <p class="muted" style="font-size:.75rem;line-height:1.4">\${t.description}</p>
+            </div>
+            <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+              <div class="flex gap-2">
+                <button class="btn btn-primary theme-use" data-template="\${t.id}" style="flex:1; padding:8px; font-size:0.8rem;">Use</button>
+                <button class="btn btn-ghost theme-preview-btn" data-template="\${t.id}" style="padding:8px; font-size:0.8rem;" title="Quick preview">Preview</button>
+              </div>
+            </div>
+          </div>
+        </div>\`;
+      }).join("");
+
+      grid.querySelectorAll(".theme-use").forEach(btn => {
+        btn.onclick = () => {
+          Utils.store.set("dc_selected_template", btn.dataset.template);
+          window.location.href = window.location.href; // hard refresh
+        };
+      });
+
+      grid.querySelectorAll(".theme-preview-btn").forEach(btn => {
+        btn.onclick = () => {
+          const template = DemoData.getTemplate(btn.dataset.template);
+          if (!template) return;
+          const templateSections = template.sections.map((s, i) => ({
+            id: Utils.uid(),
+            type: s.type,
+            title: s.title,
+            visible: s.visible !== false,
+            ...s
+          }));
+          const html = Storefront.renderPage(templateSections, { name: "Preview", tagline: template.name, theme: template.theme });
+          const w = window.open("", "_blank", "width=1200,height=800");
+          if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+        };
+      });
+    };
+
+    renderTemplateGrid();
+    
+    const searchInput = $("#builderTemplateSearch");
+    if(searchInput) {
+      searchInput.addEventListener("input", Utils.debounce(e => {
+        const active = $("#builderTemplateFilters .chip.active")?.dataset?.cat || "all";
+        renderTemplateGrid(active, e.target.value);
+      }, 200));
+    }
   };
 
   /* ---------- File upload handlers ---------- */

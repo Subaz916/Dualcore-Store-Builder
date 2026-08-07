@@ -50,6 +50,7 @@
           <div class="tabs" id="builderTabs" role="tablist">
             <button class="tab active" data-tab="sections" role="tab">Sections</button>
             <button class="tab" data-tab="theme" role="tab">Theme</button>
+            <button class="tab" data-tab="templates" role="tab">Templates</button>
             <button class="tab" data-tab="settings" role="tab">Settings</button>
           </div>
 
@@ -78,6 +79,17 @@
                 <option value="pill">Pill</option>
               </select></div>
             <button class="btn btn-primary" style="width:100%;margin-top:12px" id="applyTheme">Apply theme</button>
+          </div>
+
+          <!-- Templates panel -->
+          <div class="tab-panel" id="panelTemplates" style="display:none;padding:16px 0;max-height:calc(100vh - 200px);overflow:auto">
+            <div class="field" style="margin:16px 16px 0 16px">
+              <input class="input" type="search" placeholder="Search templates…" id="builderTemplateSearch" aria-label="Search">
+            </div>
+            <div class="filter-bar" id="builderTemplateFilters" style="padding: 0 16px; margin-top: 12px; margin-bottom: 0;">
+              <!-- filters injected here -->
+            </div>
+            <div id="builderTemplateGrid" style="display:flex; flex-direction:column; gap:16px; padding:16px;"></div>
           </div>
 
           <!-- Settings panel -->
