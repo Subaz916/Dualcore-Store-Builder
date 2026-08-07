@@ -48,11 +48,12 @@ async function supabaseDownload(path) {
 
 // App routes that should NOT be treated as store slugs
 const APP_ROUTES = new Set([
-  '', 'index.html', 'login.html', 'signup.html', 'forgot-password.html',
-  'dashboard.html', 'builder.html', 'store.html', 'publish.html',
-  'products.html', 'orders.html', 'customers.html', 'analytics.html',
-  'templates.html', 'billing.html', 'settings.html', 'admin.html',
-  'features.html', 'about.html', 'contact.html', 'pricing.html'
+  '', 'index', 'index.html', 'login', 'login.html', 'signup', 'signup.html', 'forgot-password', 'forgot-password.html',
+  'dashboard', 'dashboard.html', 'builder', 'builder.html', 'store', 'store.html', 'publish', 'publish.html',
+  'products', 'products.html', 'orders', 'orders.html', 'customers', 'customers.html', 'analytics', 'analytics.html',
+  'templates', 'templates.html', 'template-select', 'template-select.html', 'billing', 'billing.html',
+  'settings', 'settings.html', 'admin', 'admin.html', 'features', 'features.html', 'about', 'about.html',
+  'contact', 'contact.html', 'pricing', 'pricing.html'
 ]);
 
 export default async function middleware(request) {

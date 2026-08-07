@@ -723,25 +723,25 @@
 
       grid.innerHTML = list.map(t => {
         const theme = Storefront.getTheme(t.theme);
-        return \`
-        <div class="card card-hover theme-card reveal" data-template="\${t.id}" style="padding:0;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border)">
-          <div class="theme-preview" style="background:linear-gradient(135deg, \${theme.soft}, \${theme.accent}22);padding:16px;text-align:center;position:relative;min-height:140px;display:flex;flex-direction:column;justify-content:center;align-items:center">
-            <div style="font-size:3rem;margin-bottom:8px">\${t.thumbnail}</div>
-            <span class="chip" style="background:\${theme.accent};color:#fff;border:none;font-weight:700;font-size:.6rem;padding:3px 8px;border-radius:8px">\${t.category}</span>
+        return `
+        <div class="card card-hover theme-card reveal" data-template="${t.id}" style="padding:0;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border)">
+          <div class="theme-preview" style="background:linear-gradient(135deg, ${theme.soft}, ${theme.accent}22);padding:16px;text-align:center;position:relative;min-height:140px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+            <div style="font-size:3rem;margin-bottom:8px">${t.thumbnail}</div>
+            <span class="chip" style="background:${theme.accent};color:#fff;border:none;font-weight:700;font-size:.6rem;padding:3px 8px;border-radius:8px">${t.category}</span>
           </div>
           <div class="theme-body" style="padding:16px;flex:1;display:flex;flex-direction:column">
             <div>
-              <h3 style="font-size:1rem;margin-bottom:4px">\${t.name}</h3>
-              <p class="muted" style="font-size:.75rem;line-height:1.4">\${t.description}</p>
+              <h3 style="font-size:1rem;margin-bottom:4px">${t.name}</h3>
+              <p class="muted" style="font-size:.75rem;line-height:1.4">${t.description}</p>
             </div>
             <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
               <div class="flex gap-2">
-                <button class="btn btn-primary theme-use" data-template="\${t.id}" style="flex:1; padding:8px; font-size:0.8rem;">Use</button>
-                <button class="btn btn-ghost theme-preview-btn" data-template="\${t.id}" style="padding:8px; font-size:0.8rem;" title="Quick preview">Preview</button>
+                <button class="btn btn-primary theme-use" data-template="${t.id}" style="flex:1; padding:8px; font-size:0.8rem;">Use</button>
+                <button class="btn btn-ghost theme-preview-btn" data-template="${t.id}" style="padding:8px; font-size:0.8rem;" title="Quick preview">Preview</button>
               </div>
             </div>
           </div>
-        </div>\`;
+        </div>`;
       }).join("");
 
       grid.querySelectorAll(".theme-use").forEach(btn => {

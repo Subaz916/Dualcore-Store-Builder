@@ -28,8 +28,8 @@ const splash = () => {
   }
   setTimeout(() => {
     const el = document.getElementById("dcSplash");
-    if (el) { el.classList.add("done"); setTimeout(() => el.remove(), 600); }
-  }, 500);
+    if (el) { el.classList.add("done"); setTimeout(() => el.remove(), 250); }
+  }, 80);
 };
 
 /* ---------- Ripple effect on buttons ---------- */
@@ -195,9 +195,7 @@ window.requireAuth = async (redirect = "login.html") => {
 /* ---------- Bootstrap ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   applyTheme();
-  if (!document.body.classList.contains("app-page") || document.body.classList.contains("has-splash")) {
-    // splash only for landing pages
-  }
-  const noSplash = document.body.classList.contains("no-splash");
+  const isAppPage = document.body.classList.contains("app-page");
+  const noSplash = document.body.classList.contains("no-splash") || isAppPage;
   if (!noSplash) splash();
 });

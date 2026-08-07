@@ -203,21 +203,26 @@
 
     // Load sections from Supabase (cloud) or localStorage (demo)
     const loadSections = async () => {
+      const getLocal = () => {
+        const local = Utils.store.get("dc_builder_sections");
+        return (local && Array.isArray(local) && local.length > 0) ? local : DemoData.defaultSections(shop.theme);
+      };
       if (window.supa && shop.id) {
         try {
-          const { data, error } = await window.supa
+          const fetchPromise = window.supa
             .from("pages")
             .select("content")
             .eq("id", "builder")
             .eq("store_id", shop.id)
             .single();
-          if (!error && data?.content) return data.content;
+          const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({ error: true }), 800));
+          const res = await Promise.race([fetchPromise, timeoutPromise]);
+          if (!res.error && res.data?.content) return res.data.content;
         } catch (err) {
           console.warn("Failed to load from pages table:", err);
         }
       }
-      const local = Utils.store.get("dc_builder_sections");
-      return (local && Array.isArray(local) && local.length > 0) ? local : DemoData.defaultSections(shop.theme);
+      return getLocal();
     };
 
     const products = await DemoData.getProducts(user.id);
