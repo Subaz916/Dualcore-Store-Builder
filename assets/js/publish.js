@@ -27,9 +27,9 @@
   };
 
   /* ---- Plan lock ---- */
-  const paid = Auth.planPaid(sub);
+  const allowed = Auth.planPaid(sub) || Auth.trialValid(sub) || !window.supa;
   const lock = $("#planLockCard");
-  if (!paid) {
+  if (!allowed) {
     lock.classList.remove("hidden");
     const left = Utils.daysLeft(sub.end_date);
     $("#planLockText").textContent = left > 0
@@ -50,7 +50,7 @@
 
   /* ---- Main publish flow ---- */
   $("#publishBtn").onclick = async () => {
-    if (!paid) {
+    if (!allowed) {
       toast("warn", "Upgrade to a paid plan to publish your store.");
       location.href = "billing.html";
       return;

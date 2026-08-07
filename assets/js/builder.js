@@ -122,7 +122,6 @@
   const save = () => {
     Utils.store.set("dc_builder_sections", sections);
     Components.progress.pulse();
-    // persist to Supabase if available (page-level snapshot)
     if (window.supa) {
       Utils.db.upsert("pages", [{ id: "builder", store_id: (Utils.store.get("dc_shop") || {}).id, content: sections, updated_at: new Date().toISOString() }]).catch(() => {});
     }
@@ -134,15 +133,18 @@
   const renderLibrary = () => {
     const wrap = $("#sectionLibrary");
     wrap.innerHTML = LIBRARY.map(g => `
-      <div class="section-group">
-        <h4>${g.group}</h4>
-        ${g.items.map(i => `
-          <div class="section-item" draggable="true" data-type="${i.type}">
-            <span class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${g.icon}"/></svg></span>
-            <span>${i.label}</span>
-            <small class="muted" style="display:block;font-size:.72rem">${i.desc}</small>
-          </div>`).join("")}
-      </div>`).join("");
+      <div class="lib-group-title">${g.group}</div>
+      ${g.items.map(i => `
+        <div class="lib-item" draggable="true" data-type="${i.type}">
+          <div class="lib-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${g.icon}"/></svg>
+          </div>
+          <div>
+            <div class="lib-label">${i.label}</div>
+            <div class="lib-desc">${i.desc}</div>
+          </div>
+        </div>`).join("")}
+    `).join("");
   };
 
   const newSection = (type) => {
@@ -166,13 +168,14 @@
 
   /* ---------- Render canvas ---------- */
   const renderCanvas = () => {
-    const canvas = $("#canvas");
+    const canvas = $("#builderCanvas");
+    if (!canvas) return;
+
     const shop = Utils.store.get("dc_shop") || { name: "My Store", tagline: "", theme: "minimal" };
     $("#deviceUrl").textContent = (Utils.toSlug(shop.name || "mystore") || "mystore") + ".dualcore.shop";
     $("#storeNameInput").value = shop.name || "";
     $("#storeTaglineInput").value = shop.tagline || "";
 
-    // inject live product data into products sections
     const sectionsForRender = sections.map(s => {
       if (s.type === "products") {
         return { ...s, products: products.filter(p => p.status === "active").slice(0, s.count || 8) };
@@ -181,20 +184,28 @@
     });
 
     if (!sectionsForRender.length) {
-      canvas.innerHTML = `<div class="canvas-placeholder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:.4"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
-        <h3>Your store is empty</h3>
-        <p class="muted">Drag sections from the left panel to start building</p>
-      </div>`;
+      canvas.innerHTML = `
+        <div class="canvas-empty" id="canvasEmpty">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+          <h3>Your store is empty</h3>
+          <p>Drag sections from the left panel or pick a template to start building</p>
+        </div>`;
       return;
     }
 
-    canvas.innerHTML = sectionsForRender.map(s => Storefront.renderSection(s)).join("");
-    // mark selected
+    canvas.innerHTML = sectionsForRender.map(s => {
+      let html = Storefront.renderSection(s);
+      if (s.visible === false) {
+        html = html.replace('class="sf-wrap"', 'class="sf-wrap sf-hidden-wrap"');
+      }
+      return html;
+    }).join("");
+
     if (selectedId) {
       const el = canvas.querySelector(`[data-id="${selectedId}"]`);
       if (el) el.classList.add("selected");
     }
+
     bindCanvasEvents(canvas);
   };
 
@@ -208,8 +219,16 @@
         const idx = sections.findIndex(s => s.id === id);
         const act = btn.dataset.action;
         if (act === "edit") selectSection(id);
-        if (act === "dup") { sections.splice(idx, 0, { ...sections[idx], id: Utils.uid() }); pushHistory(); renderCanvas(); toast("success", "Section duplicated"); }
-        if (act === "hide") { sections[idx].visible = !sections[idx].visible; pushHistory(); renderCanvas(); toast("info", sections[idx].visible ? "Section shown" : "Section hidden"); }
+        if (act === "dup") { 
+          const copy = JSON.parse(JSON.stringify(sections[idx]));
+          copy.id = Utils.uid();
+          sections.splice(idx + 1, 0, copy); 
+          pushHistory(); renderCanvas(); toast("success", "Section duplicated"); 
+        }
+        if (act === "hide") { 
+          sections[idx].visible = !sections[idx].visible; 
+          pushHistory(); renderCanvas(); toast("info", sections[idx].visible ? "Section shown" : "Section hidden"); 
+        }
         if (act === "del") {
           Components.confirmDialog({ title: "Delete section?", message: `Delete "${sections[idx].title || sections[idx].type}"? This can't be undone.`, danger: true, confirmText: "Delete" }).then(ok => {
             if (!ok) return;
@@ -220,26 +239,16 @@
       });
     });
 
-    // drag reorder on canvas
+    // drag reorder
     canvas.querySelectorAll(".sf-wrap").forEach(wrap => {
+      wrap.setAttribute("draggable", "true");
       wrap.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/plain", wrap.dataset.id);
         wrap.classList.add("dragging");
       });
-      wrap.addEventListener("dragend", () => wrap.classList.remove("dragging"));
-      wrap.addEventListener("dragover", (e) => e.preventDefault());
-      wrap.addEventListener("drop", (e) => {
-        e.preventDefault();
-        const fromId = e.dataTransfer.getData("text/plain");
-        const toId = wrap.dataset.id;
-        if (fromId === toId) return;
-        const from = sections.findIndex(s => s.id === fromId);
-        const to = sections.findIndex(s => s.id === toId);
-        if (from < 0 || to < 0) return;
-        const [moved] = sections.splice(from, 1);
-        sections.splice(to, 0, moved);
-        pushHistory(); renderCanvas(); autosave();
-        toast("success", "Section moved");
+      wrap.addEventListener("dragend", () => {
+        wrap.classList.remove("dragging");
+        canvas.classList.remove("drop-active");
       });
     });
 
@@ -259,20 +268,19 @@
     if (!s) return;
     renderCanvas();
     const editor = $("#sectionEditor");
-    editor.classList.remove("hidden");
+    editor.classList.add("open");
     $("#editorTitle").textContent = `Edit ${defaultTitle(s.type)}`;
     const schema = EDITOR_SCHEMAS[s.type] || [];
     const fields = [];
 
-    // common: visible toggle
-    fields.push(`<div class="editor-field checkbox"><input type="checkbox" id="fld-visible" ${s.visible ? "checked" : ""}><label for="fld-visible">Show on store</label></div>`);
+    fields.push(`<div class="editor-field checkbox full"><input type="checkbox" id="fld-visible" ${s.visible ? "checked" : ""}><label for="fld-visible">Show on store</label></div>`);
 
     for (const f of schema) {
       if (f.type === "select") {
         fields.push(`<div class="editor-field"><label>${f.label}</label>
           <select class="select" id="fld-${f.key}">${f.options.map(([v, l]) => `<option value="${v}" ${s[f.key] === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>`);
       } else if (f.type === "textarea") {
-        fields.push(`<div class="editor-field"><label>${f.label}</label><textarea class="textarea" id="fld-${f.key}" rows="3">${Utils.esc(s[f.key] || "")}</textarea></div>`);
+        fields.push(`<div class="editor-field full"><label>${f.label}</label><textarea class="textarea" id="fld-${f.key}" rows="3">${Utils.esc(s[f.key] || "")}</textarea></div>`);
       } else if (f.type === "number") {
         fields.push(`<div class="editor-field"><label>${f.label}</label><input class="input" type="number" id="fld-${f.key}" value="${s[f.key] ?? ""}"></div>`);
       } else {
@@ -280,7 +288,6 @@
       }
     }
 
-    // Image upload for hero and gallery
     if (s.type === "hero") {
       fields.push(renderImageUpload("image", s.image, "Hero background image"));
     }
@@ -290,45 +297,41 @@
 
     $("#editorFields").innerHTML = fields.join("");
 
-    // Image upload listeners
     if (s.type === "hero" || s.type === "gallery") {
       bindImageUploads(s);
     }
 
-    // listeners
     $$("#editorFields input, #editorFields select, #editorFields textarea").forEach(el => {
       el.addEventListener("input", () => {
         const s2 = sections.find(x => x.id === selectedId);
         const key = el.id.replace("fld-", "");
         if (key === "visible") s2.visible = el.checked;
         else {
-          const schema2 = EDITOR_SCHEMAS[s2.type] || [];
           const isCats = key === "cats";
-          if (isCats) s2.cats = el.value;
-          else s2[key] = key === "count" ? parseInt(el.value) || 8 : el.value;
-          // normalize categories list for rendering
-          if (s2.type === "categories") s2.categories = s2.cats.split(",").map(c => c.trim()).filter(Boolean);
+          if (isCats) {
+            s2.cats = el.value;
+            s2.categories = el.value.split(",").map(c => c.trim()).filter(Boolean);
+          } else {
+            s2[key] = key === "count" ? parseInt(el.value) || 8 : el.value;
+          }
         }
         pushHistory();
         renderCanvas();
-        selectSection(selectedId); // re-render editor with saved values
         autosave();
       });
     });
 
-    // Render section style fields
     renderSectionStyles(s);
   };
 
-  /* ---------- Image upload helpers ---------- */
   const renderImageUpload = (key, currentValue, label) => {
     const images = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
     return `
-      <div class="editor-field">
+      <div class="editor-field full">
         <label>${label}</label>
         <div class="image-upload" data-key="${key}">
           <button type="button" class="upload-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
             ${images.length ? "Change image" : "Upload image"}
           </button>
           <input type="file" accept="image/*" ${images.length > 1 ? "multiple" : ""} data-target="${key}">
@@ -371,11 +374,10 @@
           toast("error", "Upload failed: " + err.message);
         } finally {
           btn.disabled = false;
-          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Change image`;
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Change image`;
         }
       };
 
-      // Remove image
       preview?.addEventListener("click", (e) => {
         const removeBtn = e.target.closest(".remove-img");
         if (!removeBtn) return;
@@ -413,7 +415,6 @@
 
     $("#sectionStyleFields").innerHTML = fields;
 
-    // Style listeners
     $$("#sectionStyleFields input, #sectionStyleFields select").forEach(el => {
       el.addEventListener("input", () => {
         const s2 = sections.find(x => x.id === selectedId);
@@ -431,41 +432,73 @@
 
   const closeEditor = () => {
     selectedId = null;
-    $("#sectionEditor").classList.add("hidden");
+    $("#sectionEditor").classList.remove("open");
     renderCanvas();
   };
 
-  /* ---------- Drag from library ---------- */
+  /* ---------- Drag & Drop Handlers ---------- */
   const bindLibraryDrag = () => {
-    $$(".section-item").forEach(item => {
+    $$(".lib-item").forEach(item => {
       item.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/plain", "new:" + item.dataset.type);
         item.classList.add("dragging");
       });
       item.addEventListener("dragend", () => item.classList.remove("dragging"));
     });
-    const canvas = $("#canvas");
-    canvas.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      canvas.classList.add("drop-zone");
-    });
-    canvas.addEventListener("dragleave", (e) => {
-      if (!canvas.contains(e.relatedTarget)) canvas.classList.remove("drop-zone");
-    });
-    canvas.addEventListener("drop", (e) => {
-      e.preventDefault();
-      canvas.classList.remove("drop-zone");
-      const data = e.dataTransfer.getData("text/plain");
-      if (!data) return;
-      if (data.startsWith("new:")) {
-        const type = data.replace("new:", "");
-        const s = newSection(type);
-        sections.push(s);
-        pushHistory(); renderCanvas(); autosave();
-        selectSection(s.id);
-        toast("success", `${defaultTitle(type)} added`);
+  };
+
+  window.__builderDrop = (e) => {
+    e.preventDefault();
+    const canvas = $("#builderCanvas");
+    if (canvas) canvas.classList.remove("drop-active");
+    const data = e.dataTransfer.getData("text/plain");
+    if (!data) return;
+    
+    if (data.startsWith("new:")) {
+      const type = data.replace("new:", "");
+      const s = newSection(type);
+      
+      // Determine drop index based on y coordinate of the drop event
+      const clientY = e.clientY;
+      const wraps = Array.from(canvas.querySelectorAll(".sf-wrap"));
+      let toIdx = sections.length;
+      for (let i = 0; i < wraps.length; i++) {
+        const rect = wraps[i].getBoundingClientRect();
+        const middle = rect.top + rect.height / 2;
+        if (clientY < middle) {
+          toIdx = i;
+          break;
+        }
       }
-    });
+      
+      sections.splice(toIdx, 0, s);
+      pushHistory(); renderCanvas(); autosave();
+      selectSection(s.id);
+      toast("success", `${defaultTitle(type)} added`);
+    } else {
+      // Reordering via drop
+      const fromId = data;
+      const clientY = e.clientY;
+      const wraps = Array.from(canvas.querySelectorAll(".sf-wrap"));
+      let toIdx = sections.length;
+      for (let i = 0; i < wraps.length; i++) {
+        const rect = wraps[i].getBoundingClientRect();
+        const middle = rect.top + rect.height / 2;
+        if (clientY < middle) {
+          toIdx = i;
+          break;
+        }
+      }
+      const fromIdx = sections.findIndex(s => s.id === fromId);
+      if (fromIdx >= 0) {
+        const [moved] = sections.splice(fromIdx, 1);
+        let targetIdx = toIdx;
+        if (fromIdx < toIdx) targetIdx = toIdx - 1;
+        sections.splice(targetIdx, 0, moved);
+        pushHistory(); renderCanvas(); autosave();
+        toast("success", "Section reordered");
+      }
+    }
   };
 
   /* ---------- Undo / redo ---------- */
@@ -484,9 +517,9 @@
 
   /* ---------- Device switching ---------- */
   const setDevice = (d) => {
-    document.body.dataset.device = d;
-    const canvasWrap = $("#canvasWrap");
-    canvasWrap.setAttribute("data-device", d);
+    const frame = $("#deviceFrame");
+    if (!frame) return;
+    frame.className = "builder-device-frame " + d;
   };
 
   /* ---------- Theme ---------- */
@@ -517,14 +550,14 @@
       "Didot, serif",
     ].map(f => `<option value="${f}" ${(shop.theme_font || theme.font) === f ? "selected" : ""}>${f.split(",")[0]}</option>`).join("");
     $("#themeRadius").value = shop.theme_radius || "16";
+    $("#themeRadiusVal").textContent = shop.theme_radius || "16";
     $("#themeButtonStyle").value = shop.theme_button_style || "rounded";
   };
 
-  /* Apply theme colors onto the canvas as CSS vars */
   const applyThemeToCanvas = () => {
     const shop = Utils.store.get("dc_shop") || { theme: "minimal" };
     const th = Storefront.getTheme(shop.theme);
-    const canvas = $("#canvas");
+    const canvas = $("#builderCanvas");
     if (!canvas) return;
     canvas.style.setProperty("--t-accent", shop.theme_color || th.accent);
     canvas.style.setProperty("--t-soft", shop.theme_soft || th.soft);
@@ -551,7 +584,6 @@
     renderSidebar("builder");
     renderTopbar("Store Builder", "Design your storefront");
 
-    // mobile sidebar toggle
     const topbarActions = Utils.$("#topbarActions");
     if (topbarActions) {
       topbarActions.innerHTML = `
@@ -561,18 +593,15 @@
       Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
     }
 
-    // Check for selected template from template-select page
     const selectedTemplateId = Utils.store.get("dc_selected_template");
     if (selectedTemplateId) {
       const template = DemoData.getTemplate(selectedTemplateId);
       if (template) {
-        // Apply template theme
         shop.theme = template.theme;
         Utils.store.set("dc_shop", shop);
         if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
 
-        // Load template sections
-        sections = template.sections.map((s, i) => ({
+        sections = template.sections.map((s) => ({
           id: Utils.uid(),
           type: s.type,
           title: s.title,
@@ -581,7 +610,6 @@
         }));
         Utils.store.set("dc_builder_sections", sections);
         toast("success", `${template.name} template loaded!`);
-        // Clear template selection so it doesn't reload on refresh
         Utils.store.remove("dc_selected_template");
       }
     } else {
@@ -589,27 +617,23 @@
     }
 
     renderBuilderTemplates();
-
     renderLibrary();
     renderThemeControls();
     applyThemeToCanvas();
     renderCanvas();
     bindLibraryDrag();
 
-    // Load SEO settings
     const shopSettings = Utils.store.get("dc_shop") || {};
     $("#seoTitle").value = shopSettings.seo_title || "";
     $("#seoDescription").value = shopSettings.seo_description || "";
     $("#customDomain").value = shopSettings.custom_domain || "";
 
-    // File upload handlers
     bindFileUploads(shopSettings);
 
     $("undoBtn").onclick = undo;
     $("redoBtn").onclick = redo;
     $("#deviceSelect").onchange = (e) => setDevice(e.target.value);
     $("#previewBtn").onclick = () => {
-      // open a preview window with the rendered page
       const shop2 = { ...(Utils.store.get("dc_shop") || {}), name: $("#storeNameInput").value || "My Store", tagline: $("#storeTaglineInput").value };
       Utils.store.set("dc_shop", shop2);
       const html = Storefront.renderPage(sections, shop2);
@@ -620,30 +644,42 @@
     $("#publishBtn").onclick = () => location.href = "publish.html";
     $("#closeEditor").onclick = closeEditor;
 
-    // tabs
+    $("#themeRadius").addEventListener("input", (e) => {
+      $("#themeRadiusVal").textContent = e.target.value;
+    });
+
+    // tab switching
     $$("#builderTabs .tab").forEach(tab => {
       tab.onclick = () => {
         $$("#builderTabs .tab").forEach(t => t.classList.remove("active"));
         tab.classList.add("active");
-        ["sections", "theme", "templates", "settings"].forEach(p => $("#panel" + p[0].toUpperCase() + p.slice(1)).style.display = p === tab.dataset.tab ? "block" : "none");
+        
+        $$(".builder-panel").forEach(p => p.classList.remove("active"));
+        const panelId = "panel" + tab.dataset.panel.charAt(0).toUpperCase() + tab.dataset.panel.slice(1);
+        const panel = $("#" + panelId);
+        if (panel) panel.classList.add("active");
       };
     });
 
-    // section search
     $("#sectionSearch").addEventListener("input", (e) => {
       const q = e.target.value.toLowerCase();
-      $$(".section-group").forEach(g => {
-        let any = false;
-        g.querySelectorAll(".section-item").forEach(it => {
-          const show = it.textContent.toLowerCase().includes(q);
-          it.style.display = show ? "" : "none";
-          if (show) any = true;
-        });
-        g.style.display = any ? "" : "none";
+      $$(".lib-item").forEach(it => {
+        const show = it.textContent.toLowerCase().includes(q);
+        it.style.display = show ? "" : "none";
+      });
+      $$(".lib-group-title").forEach(title => {
+        let sibling = title.nextElementSibling;
+        let anyVisible = false;
+        while (sibling && sibling.classList.contains("lib-item")) {
+          if (sibling.style.display !== "none") {
+            anyVisible = true;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        title.style.display = anyVisible ? "" : "none";
       });
     });
 
-    // theme apply
     $("#applyTheme").onclick = () => {
       const shop3 = Utils.store.get("dc_shop") || {};
       shop3.theme = $("#themeSelect").value;
@@ -658,7 +694,6 @@
       renderCanvas();
     };
 
-    // settings save
     $("#saveSettings").onclick = async () => {
       const shop4 = Utils.store.get("dc_shop") || {};
       shop4.name = $("#storeNameInput").value.trim() || "My Store";
@@ -670,7 +705,6 @@
       renderCanvas();
     };
 
-    // SEO save
     $("#saveSeo").onclick = async () => {
       const shop5 = Utils.store.get("dc_shop") || {};
       shop5.seo_title = $("#seoTitle").value.trim();
@@ -681,7 +715,6 @@
       toast("success", "SEO settings saved");
     };
 
-    // keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
@@ -697,7 +730,7 @@
     const TEMPLATES = DemoData.getTemplates();
     const categories = ["all", ...new Set(TEMPLATES.map(t => t.category))];
     
-    const wrapFilters = $("#builderTemplateFilters");
+    const wrapFilters = $("#tmplFilters");
     if(wrapFilters) {
       wrapFilters.innerHTML = categories.map(c => 
         `<button class="chip ${c === 'all' ? 'active' : ''}" data-cat="${c}">${c}</button>`
@@ -707,13 +740,13 @@
         ch.onclick = () => {
           wrapFilters.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
           ch.classList.add("active");
-          renderTemplateGrid(ch.dataset.cat, $("#builderTemplateSearch")?.value || "");
+          renderTemplateGrid(ch.dataset.cat, $("#tmplSearch")?.value || "");
         };
       });
     }
 
     const renderTemplateGrid = (cat = "all", q = "") => {
-      const grid = $("#builderTemplateGrid");
+      const grid = $("#tmplGrid");
       if(!grid) return;
       const list = TEMPLATES.filter(t => {
         const matchCat = cat === "all" || t.category === cat;
@@ -724,38 +757,61 @@
       grid.innerHTML = list.map(t => {
         const theme = Storefront.getTheme(t.theme);
         return `
-        <div class="card card-hover theme-card reveal" data-template="${t.id}" style="padding:0;overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--border)">
-          <div class="theme-preview" style="background:linear-gradient(135deg, ${theme.soft}, ${theme.accent}22);padding:16px;text-align:center;position:relative;min-height:140px;display:flex;flex-direction:column;justify-content:center;align-items:center">
-            <div style="font-size:3rem;margin-bottom:8px">${t.thumbnail}</div>
-            <span class="chip" style="background:${theme.accent};color:#fff;border:none;font-weight:700;font-size:.6rem;padding:3px 8px;border-radius:8px">${t.category}</span>
+        <div class="tmpl-card" data-template="${t.id}">
+          <div class="tmpl-thumb" style="background:linear-gradient(135deg, ${theme.soft}, ${theme.accent}22)">
+            <div>${t.thumbnail}</div>
           </div>
-          <div class="theme-body" style="padding:16px;flex:1;display:flex;flex-direction:column">
-            <div>
-              <h3 style="font-size:1rem;margin-bottom:4px">${t.name}</h3>
-              <p class="muted" style="font-size:.75rem;line-height:1.4">${t.description}</p>
-            </div>
-            <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
-              <div class="flex gap-2">
-                <button class="btn btn-primary theme-use" data-template="${t.id}" style="flex:1; padding:8px; font-size:0.8rem;">Use</button>
-                <button class="btn btn-ghost theme-preview-btn" data-template="${t.id}" style="padding:8px; font-size:0.8rem;" title="Quick preview">Preview</button>
-              </div>
+          <div class="tmpl-body">
+            <div class="tmpl-name">${t.name}</div>
+            <div class="tmpl-desc">${t.description}</div>
+            <div class="tmpl-actions">
+              <button class="btn btn-primary btn-sm btn-use" data-template="${t.id}">Use</button>
+              <button class="btn btn-ghost btn-sm btn-preview" data-template="${t.id}">Preview</button>
             </div>
           </div>
         </div>`;
       }).join("");
 
-      grid.querySelectorAll(".theme-use").forEach(btn => {
-        btn.onclick = () => {
-          Utils.store.set("dc_selected_template", btn.dataset.template);
-          window.location.href = window.location.href; // hard refresh
+      grid.querySelectorAll(".btn-use").forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const tid = btn.dataset.template;
+          const template = DemoData.getTemplate(tid);
+          if (!template) return;
+          Components.confirmDialog({
+            title: "Load template?",
+            message: `Do you want to load the "${template.name}" template? This will replace your current section layout.`,
+            confirmText: "Load"
+          }).then(ok => {
+            if (!ok) return;
+            const shop = Utils.store.get("dc_shop") || {};
+            shop.theme = template.theme;
+            Utils.store.set("dc_shop", shop);
+            if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
+
+            sections = template.sections.map(s => ({
+              id: Utils.uid(),
+              type: s.type,
+              title: s.title,
+              visible: s.visible !== false,
+              ...s
+            }));
+            pushHistory();
+            renderCanvas();
+            applyThemeToCanvas();
+            renderThemeControls();
+            save();
+            toast("success", `Loaded template "${template.name}"`);
+          });
         };
       });
 
-      grid.querySelectorAll(".theme-preview-btn").forEach(btn => {
-        btn.onclick = () => {
+      grid.querySelectorAll(".btn-preview").forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
           const template = DemoData.getTemplate(btn.dataset.template);
           if (!template) return;
-          const templateSections = template.sections.map((s, i) => ({
+          const templateSections = template.sections.map(s => ({
             id: Utils.uid(),
             type: s.type,
             title: s.title,
@@ -765,16 +821,17 @@
           const html = Storefront.renderPage(templateSections, { name: "Preview", tagline: template.name, theme: template.theme });
           const w = window.open("", "_blank", "width=1200,height=800");
           if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+          else toast("warn", "Pop-up blocked — allow pop-ups for preview");
         };
       });
     };
 
     renderTemplateGrid();
     
-    const searchInput = $("#builderTemplateSearch");
+    const searchInput = $("#tmplSearch");
     if(searchInput) {
       searchInput.addEventListener("input", Utils.debounce(e => {
-        const active = $("#builderTemplateFilters .chip.active")?.dataset?.cat || "all";
+        const active = $("#tmplFilters .chip.active")?.dataset?.cat || "all";
         renderTemplateGrid(active, e.target.value);
       }, 200));
     }
@@ -784,6 +841,7 @@
   const bindFileUploads = (shop) => {
     const handleUpload = async (inputId, key) => {
       const input = $(`#${inputId}`);
+      if (!input) return;
       input.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
