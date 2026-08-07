@@ -42,6 +42,18 @@ window.initSupabase = (url, key) => {
   } catch { window.supa = null; }
 };
 
+/* ---------- Readiness promise ----------
+   Resolves when the SDK has either loaded (cloud) or failed (demo).
+   This guarantees page scripts and data layer wait for a definitive
+   mode before running, fixing "works on hard refresh only" bug. */
+window.SUPABASE_READY = new Promise((resolve) => {
+  if (typeof window.supabase !== "undefined") {
+    resolve();
+  } else {
+    window.addEventListener("dualcore:supabase-ready", () => resolve(), { once: true });
+  }
+});
+
 if (typeof window.SUPABASE_CREATE_CLIENT !== "undefined") {
   window.initSupabase(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
 } else {

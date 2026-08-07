@@ -93,6 +93,7 @@ const Utils = (() => {
 
   const db = {
     async insert(table, row) {
+      await supabaseReady();
       if (window.supa) {
         try {
           const { error } = await window.supa.from(table).insert(row);
@@ -105,6 +106,7 @@ const Utils = (() => {
       return row;
     },
     async select(table, opts = {}) {
+      await supabaseReady();
       if (window.supa) {
         try {
           let q = window.supa.from(table).select(opts.cols || "*");
@@ -119,6 +121,7 @@ const Utils = (() => {
       return demoSel(table, opts);
     },
     async update(table, match, patch) {
+      await supabaseReady();
       if (window.supa) {
         try {
           const { error } = await window.supa.from(table).update(patch).match(match);
@@ -132,6 +135,7 @@ const Utils = (() => {
       return patch;
     },
     async remove(table, match) {
+      await supabaseReady();
       if (window.supa) {
         try {
           const { error } = await window.supa.from(table).delete().match(match);
@@ -142,6 +146,7 @@ const Utils = (() => {
       store.set("dc_" + table, store.get("dc_" + table, []).filter(r => !Object.entries(match).every(([k, v]) => r[k] === v)));
     },
     async upsert(table, rows) {
+      await supabaseReady();
       if (window.supa) {
         try {
           const { error } = await window.supa.from(table).upsert(rows);
@@ -239,6 +244,12 @@ const Utils = (() => {
 
   const qs = (key, fb = "") => new URLSearchParams(location.search).get(key) || fb;
 
+  /* ---------- Supabase readiness ----------
+     Returns a promise that resolves when the SDK has loaded
+     (cloud mode) or failed (demo mode). Page scripts and data
+     layer use this to avoid race conditions. */
+  const supabaseReady = () => (window.SUPABASE_READY || Promise.resolve());
+
   const scrollToId = (id) => {
     const el = id === "top" ? document.body : document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -250,6 +261,7 @@ const Utils = (() => {
   const getLocalUser = () => store.get("dc_user");
 
   const isSignedIn = async () => {
+    await supabaseReady();
     // 1) The local mirror is the single source of truth — synchronous,
     //    set at login/signup before any navigation. No waiting on the
     //    Supabase client's async session recovery, so no false "guest".
@@ -279,7 +291,7 @@ const Utils = (() => {
     $, $$, uid, debounce, throttle, esc, fmtMoney, fmtNum, fmtDate, timeAgo, daysLeft, shortId,
     initials, avatarColor, clamp, rand, randInt, toSlug, safe, store, db, uploadFile,
     toCSV, downloadFile, copy, initReveal, animateCount, typeText, fmtShort, qs,
-    scrollToId, onEscape, getLocalUser, isSignedIn,
+    scrollToId, onEscape, getLocalUser, isSignedIn, supabaseReady,
   };
 })();
 

@@ -101,7 +101,7 @@
             <input type="checkbox" id="paySave" checked style="accent-color:var(--primary)"> Save card for future payments
           </label>
         </div>
-        <p class="muted" style="font-size:.8rem">Test mode: this is a demo checkout. In production you'd connect a gateway (Stripe/PayFast). No real charge is made.</p>
+        <p class="muted" style="font-size:.8rem">In production you'd connect a payment gateway (Stripe/PayFast).</p>
         <div class="modal-foot" style="padding:16px 0 0;border:none">
           <button type="button" class="btn btn-ghost" data-close>Cancel</button>
           <button class="btn btn-primary" type="submit" id="payBtn">Pay PKR ${plan === "basic" ? "300" : "1,000"}</button>

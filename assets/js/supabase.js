@@ -1,9 +1,10 @@
 /* ============================================================
    DualCore — supabase.js
-   Loads the Supabase JS SDK (v2) from CDN SYNCHRONOUSLY so that
-   window.supa is ready before any page script runs. This keeps
-   the whole app in ONE consistent mode (cloud OR demo) per load
-   — no mid-session flips between localStorage and Supabase auth.
+   Loads the Supabase JS SDK (v2) from CDN and guarantees a
+   "dualcore:supabase-ready" event is dispatched once the SDK
+   has either loaded (cloud mode) or failed (demo mode). This
+   lets the app wait for a definitive mode decision before
+   running any data/auth logic.
    ============================================================ */
 
 (() => {
@@ -27,16 +28,17 @@
     window.dispatchEvent(new CustomEvent("dualcore:supabase-ready"));
   };
 
-  // 1) SDK already present (edge cache / other loader) → boot now.
+  // 1) SDK already present → boot now.
   if (window.supabase) { boot(); return; }
 
-  // 2) Synchronous load: a classic script appended from the parser
-  //    blocks further parsing until it executes, so the scripts that
-  //    follow (app.js, auth.js, page scripts) see window.supa ready.
+  // 2) Load SDK from CDN. On success or total failure, fire
+  //    dualcore:supabase-ready so the app can proceed.
   (function syncLoad(i) {
     if (i >= srcs.length) {
-      // No network access → demo mode. supa stays null deliberately.
+      // All CDNs failed → demo mode. Ensure ready event fires.
       console.warn("DualCore: Supabase SDK unavailable — demo mode with local data.");
+      window.supa = null;
+      window.dispatchEvent(new CustomEvent("dualcore:supabase-ready"));
       return;
     }
     const s = document.createElement("script");

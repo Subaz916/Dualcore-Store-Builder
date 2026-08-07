@@ -3,7 +3,7 @@
    ============================================================ */
 
 const Auth = (() => {
-  const { db, store, isSignedIn } = Utils;
+  const { db, store, isSignedIn, supabaseReady } = Utils;
 
   const toUser = (u) => u ? {
     id: u.id,
@@ -31,6 +31,7 @@ const Auth = (() => {
 
   /* ---------- Restore session (local-first, no network dependency) ---------- */
   const restoreSession = async () => {
+    await supabaseReady();
     if (!window.supa) return;
     try {
       const { data } = await window.supa.auth.getSession();
@@ -41,6 +42,7 @@ const Auth = (() => {
   };
 
   const getUser = async () => {
+    await supabaseReady();
     if (window.supa) {
       // 1) mirror first (instant, local) — never bounces the user
       const mirror = store.get("dc_session") || store.get("dc_user");
@@ -58,6 +60,7 @@ const Auth = (() => {
   };
 
   const getSession = async () => {
+    await supabaseReady();
     if (window.supa) {
       try { const { data } = await window.supa.auth.getSession(); return data.session; }
       catch { return null; }
@@ -109,10 +112,7 @@ const Auth = (() => {
       window.supa.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + "/dashboard.html" } });
       return;
     }
-    Utils.toast("info", `${provider} login needs Supabase keys — enabling demo account instead.`);
-    const email = Utils.toSlug(provider) + "-" + Date.now() + "@demo.dualcore.shop";
-    Utils.store.set("dc_user", { id: Utils.uid(), email, name: `${provider} User`, created_at: new Date().toISOString() });
-    setTimeout(() => location.href = "dashboard.html", 800);
+    Utils.toast("error", `${provider} login requires Supabase configuration.`);
   };
 
   /* ---------- Forgot password ---------- */

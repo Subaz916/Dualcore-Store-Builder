@@ -19,13 +19,6 @@
     const subs = Utils.store.get("dc_subscriptions", []);
     const profiles = Utils.store.get("dc_profiles", []);
 
-    if (!window.supa && !users.length) {
-      await Auth.newUser();
-      users.push(...Utils.store.get("dc_users", []));
-      stores.push(...Utils.store.get("dc_stores", []));
-      subs.push(...Utils.store.get("dc_subscriptions", []));
-    }
-
     const paidCount = subs.filter(s => (s.plan === "basic" || s.plan === "premium") && s.status === "active").length;
     const published = stores.filter(s => s.status === "published").length;
 

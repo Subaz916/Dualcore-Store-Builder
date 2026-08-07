@@ -29,6 +29,15 @@
     Components.btnLoading(btn, true);
     try {
       await Auth.signIn({ email, password, remember });
+      // Ensure user profile/store/subscription exist (for users who signed up
+      // with email verification required - dbNewUser wasn't called on signup)
+      const user = await Auth.getUser();
+      if (user) {
+        const stores = await Utils.db.select("stores", { eq: { user_id: user.id }, limit: 1 });
+        if (!stores.length) {
+          await Auth.dbNewUser(user.id);
+        }
+      }
       toast("success", "Logged in! Taking you to your dashboard…");
       setTimeout(() => location.href = "dashboard.html", 700);
     } catch (err) {
