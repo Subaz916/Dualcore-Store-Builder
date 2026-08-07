@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — DualCore</title>
+  <meta name="description" content="Manage your profile, store branding and SEO settings.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Settings</h1>
+          <p class="muted">Profile, store branding, SEO</p>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+        <nav class="settings-nav" id="settingsNav">
+          <a data-section="store" class="active">🛍 Store</a>
+          <a data-section="profile">👤 Profile</a>
+          <a data-section="seo">🔍 SEO</a>
+          <a data-section="branding">🎨 Branding</a>
+          <a data-section="security">🔐 Security</a>
+        </nav>
+
+        <!-- STORE -->
+        <div class="settings-section active" id="sec-store">
+          <h2>Store details</h2>
+          <p>These appear on your storefront.</p>
+          <div class="card">
+            <div class="fields">
+              <div class="field"><label>Store name</label><input class="input" id="st-name"></div>
+              <div class="field"><label>Tagline</label><input class="input" id="st-tagline" placeholder="Short, catchy description"></div>
+              <div class="field"><label>Store URL</label><div class="flex gap-1 align-center"><input class="input store-url-input" id="st-slug"><span class="muted" style="font-size:.9rem">.dualcore.shop</span></div></div>
+              <div class="field"><label>Announcement bar</label><input class="input" id="st-announce" placeholder="Free shipping on orders over PKR 5,000"></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-primary" id="saveStore">Save changes</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROFILE -->
+        <div class="settings-section" id="sec-profile">
+          <h2>Profile</h2>
+          <p>Your personal account details.</p>
+          <div class="card">
+            <div class="flex align-center gap-2" style="margin-bottom:20px">
+              <span class="avatar avatar-lg" id="pf-avatar">?</span>
+              <button class="btn btn-ghost btn-sm" id="pf-change">Change photo</button>
+            </div>
+            <div class="grid grid-2" style="gap:0 14px">
+              <div class="field"><label>Full name</label><input class="input" id="pf-name"></div>
+              <div class="field"><label>Email</label><input class="input" id="pf-email" disabled></div>
+            </div>
+            <button class="btn btn-primary" id="saveProfile">Save profile</button>
+          </div>
+        </div>
+
+        <!-- SEO -->
+        <div class="settings-section" id="sec-seo">
+          <h2>Search engine optimization</h2>
+          <p>Control how your store appears in search results.</p>
+          <div class="grid grid-2" style="gap:20px">
+            <div class="card">
+              <div class="field"><label>Meta title</label><input class="input" id="seo-title"><div class="hint" id="seo-title-count">0 / 60</div></div>
+              <div class="field"><label>Meta description</label><textarea class="textarea" id="seo-desc" rows="3"></textarea><div class="hint" id="seo-desc-count">0 / 160</div></div>
+              <div class="field"><label>Keywords</label><input class="input" id="seo-keywords" placeholder="fashion, handmade, karachi"></div>
+              <button class="btn btn-primary" id="saveSeo">Save SEO</button>
+            </div>
+            <div class="card">
+              <h3 style="font-size:1rem;margin-bottom:16px">SEO score</h3>
+              <div class="flex align-center gap-3" style="gap:24px">
+                <div class="seo-score-ring">
+                  <svg viewBox="0 0 130 130">
+                    <circle cx="65" cy="65" r="54" fill="none" stroke="var(--border)" stroke-width="11"/>
+                    <circle cx="65" cy="65" r="54" fill="none" stroke="var(--success)" stroke-width="11" stroke-linecap="round" id="seoRing" stroke-dasharray="339" stroke-dashoffset="20"/>
+                  </svg>
+                  <div class="ring-val" id="seoScore">94</div>
+                </div>
+                <div style="flex:1">
+                  <div class="seo-check"><span class="ok">✓</span> Meta title & description</div>
+                  <div class="seo-check"><span class="ok">✓</span> Open Graph tags</div>
+                  <div class="seo-check"><span class="ok">✓</span> Sitemap.xml & robots.txt</div>
+                  <div class="seo-check"><span class="warn">!</span> Add more descriptive alt text</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BRANDING -->
+        <div class="settings-section" id="sec-branding">
+          <h2>Branding</h2>
+          <p>Design system preferences.</p>
+          <div class="card">
+            <div class="grid grid-2" style="gap:0 14px">
+              <div class="field"><label>Logo</label><input class="input" type="file" accept="image/*" id="br-logo"></div>
+              <div class="field"><label>Favicon</label><input class="input" type="file" accept="image/*" id="br-favicon"></div>
+            </div>
+            <div class="grid grid-2" style="gap:0 14px">
+              <div class="field"><label>Primary color</label><input type="color" class="input" id="br-color" style="height:44px;padding:4px"></div>
+              <div class="field"><label>Store font</label>
+                <select class="select" id="br-font">
+                  <option value="Inter">Inter (modern)</option>
+                  <option value="Georgia, serif">Georgia (classic)</option>
+                  <option value="'Poppins', sans-serif">Poppins (playful)</option>
+                  <option value="'Playfair Display', serif">Playfair (elegant)</option>
+                  <option value="Didot, serif">Didot (luxury)</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="saveBranding">Save branding</button>
+          </div>
+        </div>
+
+        <!-- SECURITY -->
+        <div class="settings-section" id="sec-security">
+          <h2>Security</h2>
+          <p>Password and session management.</p>
+          <div class="card" style="max-width:480px">
+            <div class="field"><label>New password</label><input class="input" type="password" id="sec-password" placeholder="Min 8 characters"></div>
+            <div class="field"><label>Confirm password</label><input class="input" type="password" id="sec-password2" placeholder="Repeat password"></div>
+            <button class="btn btn-danger" id="changePassword">Change password</button>
+            <hr style="border:none;border-top:1px solid var(--border);margin:22px 0">
+            <p class="muted" style="font-size:.88rem;margin-bottom:14px">Active sessions across your devices.</p>
+            <div class="flex-between" style="padding:10px 0;border-bottom:1px dashed var(--border);font-size:.9rem">
+              <div class="td-flex"><span class="badge badge-success">●</span><span>This device (Chrome · Windows)</span></div>
+              <span class="td-sub">Now</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-top:16px" id="signOutAll">Sign out everywhere</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/settings.js"></script>
+</body>
+</html>

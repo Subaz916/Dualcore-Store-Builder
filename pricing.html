@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing — DualCore Store Builder</title>
+  <meta name="description" content="Simple, honest pricing. Start free for 3 days, then choose Basic at PKR 300/mo or Premium at PKR 1000/mo. No hidden fees.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/pricing.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body>
+  <section class="page-hero" style="padding-bottom:0">
+    <div class="blob blob-1" style="opacity:.2"></div>
+    <div class="container" style="position:relative;z-index:1">
+      <span class="eyebrow reveal">💎 Pricing</span>
+      <h1 class="reveal" data-delay="1">Simple plans. <span class="gradient-text">Serious power.</span></h1>
+      <p class="reveal" data-delay="2">Start free for 3 days. No card required. Cancel anytime.</p>
+
+      <div class="billing-toggle reveal" data-delay="3">
+        <span>Monthly</span>
+        <label class="switch">
+          <input type="checkbox" id="billingCycle">
+          <span class="slider"></span>
+        </label>
+        <span>Yearly <span class="save">SAVE 20%</span></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-sm">
+    <div class="container">
+      <div class="pricing-grid" id="pricingPlans"></div>
+      <p class="text-center muted" style="margin-top:26px;font-size:.88rem">Prices in PKR · Taxes may apply · Cancel anytime</p>
+    </div>
+  </section>
+
+  <section class="section alt-bg">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Compare</span>
+        <h2>Every feature, side by side</h2>
+      </div>
+      <div class="card reveal" style="overflow-x:auto;padding:16px">
+        <table class="compare-table" id="compareTable"></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cta-band reveal">
+        <span class="badge" style="background:rgba(255,255,255,.2);color:#fff;margin-bottom:14px">Ready when you are</span>
+        <h2>Launch your store today</h2>
+        <p>Create your free account and start building in the next 60 seconds.</p>
+        <a href="signup.html" class="btn btn-white btn-lg">Get started free</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="index.html" class="logo" style="color:#fff;margin-bottom:16px">
+            <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span><span>DualCore</span>
+          </a>
+          <p>Create, customize and launch a beautiful online store. No code, no limits.</p>
+        </div>
+        <div>
+          <h4>Products</h4>
+          <a href="builder.html">Store Builder</a><a href="templates.html">Themes</a><a href="features.html">Features</a><a href="pricing.html">Pricing</a>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <a href="about.html">About</a><a href="contact.html">Contact</a>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="#" onclick="return false">Privacy Policy</a><a href="#" onclick="return false">Terms of Service</a><a href="#" onclick="return false">Refund Policy</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 DualCore Store Builder. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/components/navbar.js"></script>
+  <script src="assets/js/pricing.js"></script>
+</body>
+</html>

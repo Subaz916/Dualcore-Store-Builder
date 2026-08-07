@@ -1,0 +1,95 @@
+/* ============================================================
+   DualCore — Animations & Keyframes
+   ============================================================ */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+@keyframes pulse-soft { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: .85; } }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@keyframes blob-pan { from { transform: translate(0,0) scale(1); } to { transform: translate(60px, -40px) scale(1.15); } }
+@keyframes toast-in { from { opacity: 0; transform: translateX(60px) scale(.95); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { to { opacity: 0; transform: translateX(70px); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(.92) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes gradient-shift { 0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%} }
+@keyframes gradient-pan { to { background-position: 200% center; } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ticker { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+@keyframes count-up-ring { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes bounce-in { 0%{opacity:0;transform:translateY(24px) scale(.96)}60%{opacity:1;transform:translateY(-4px) scale(1.02)}100%{transform:none} }
+@keyframes ripple { to { transform: scale(3.4); opacity: 0; } }
+@keyframes cursor-blink { 0%,40%{opacity:1}60%,100%{opacity:0} }
+
+/* ---------- Cursor blink (typing) ---------- */
+.typing-cursor { display: inline-block; width: 3px; background: var(--primary); animation: cursor-blink 1s infinite; margin-left: 2px; border-radius: 3px; }
+
+/* ---------- Gradient text animated ---------- */
+.gradient-animated {
+  background: linear-gradient(90deg, #5C6EFF, #7C4DFF, #00C896, #5C6EFF);
+  background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: gradient-pan 6s linear infinite;
+}
+
+/* ---------- Ripple button effect ---------- */
+.ripple-ink {
+  position: absolute; border-radius: 50%; background: rgba(255,255,255,.45);
+  transform: scale(0); animation: ripple .6s linear; pointer-events: none;
+}
+
+/* ---------- Animated gradient border card ---------- */
+.gradient-border { position: relative; }
+.gradient-border::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+  background: linear-gradient(120deg, #5C6EFF, #7C4DFF, #00C896, #5C6EFF);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  background-size: 300% 300%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* ---------- Marquee ---------- */
+.marquee { display: flex; overflow: hidden; user-select: none; }
+.marquee-track { display: flex; gap: 16px; min-width: 200%; animation: marquee 30s linear infinite; }
+.marquee-track:hover { animation-play-state: paused; }
+
+/* ---------- Ticker (announcement bar) ---------- */
+.ticker { white-space: nowrap; overflow: hidden; }
+.ticker span { display: inline-block; animation: ticker 22s linear infinite; }
+
+/* ---------- Stagger children ---------- */
+.stagger > * { opacity: 0; transform: translateY(22px); transition: opacity .6s var(--transition), transform .6s var(--transition); }
+.stagger.visible > * { opacity: 1; transform: none; }
+.stagger.visible > *:nth-child(2){ transition-delay: .08s }
+.stagger.visible > *:nth-child(3){ transition-delay: .16s }
+.stagger.visible > *:nth-child(4){ transition-delay: .24s }
+.stagger.visible > *:nth-child(5){ transition-delay: .32s }
+.stagger.visible > *:nth-child(6){ transition-delay: .40s }
+
+/* ---------- Hover lift ---------- */
+.hover-lift { transition: transform var(--transition), box-shadow var(--transition); }
+.hover-lift:hover { transform: translateY(-6px) scale(1.02); }
+.hover-glow { transition: var(--transition); }
+.hover-glow:hover { box-shadow: var(--shadow-primary); }
+
+/* ---------- Rotating loader ring ---------- */
+.ring-spin { animation: spin 1.2s linear infinite; transform-origin: center; }
+
+/* ---------- Underline magic links ---------- */
+.magic-link { position: relative; font-weight: 600; }
+.magic-link::after {
+  content: ""; position: absolute; left: 0; bottom: -3px; height: 2px; width: 0%;
+  background: var(--primary); transition: width var(--transition); border-radius: 3px;
+}
+.magic-link:hover::after { width: 100%; }
+
+/* ---------- Selection shake (for validation) ---------- */
+.shake { animation: shake .4s; }
+@keyframes shake { 0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)} }
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Publish — DualCore</title>
+  <meta name="description" content="Generate your storefront files and publish to your domain.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Publish</h1>
+          <p class="muted">Generate your store and put it live</p>
+        </div>
+      </div>
+
+      <!-- publish hero -->
+      <div class="publish-hero">
+        <div>
+          <span class="eyebrow">🚀 Your store URL</span>
+          <h2 style="margin:6px 0 10px" id="publishStoreName">My Store</h2>
+          <span class="url-pill" id="publishUrl">mystore.dualcore.shop <button class="btn-icon" id="copyUrl" style="padding:4px" aria-label="Copy">📋</button></span>
+        </div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-ghost" id="previewStoreBtn">👁 Preview</button>
+          <button class="btn btn-primary btn-lg" id="publishBtn">⚡ Publish now</button>
+        </div>
+      </div>
+
+      <!-- plan lock (shown if free/expired) -->
+      <div class="card hidden" id="planLockCard" style="margin-top:20px;border-color:rgba(245,158,11,.4);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(92,110,255,.05))">
+        <div class="flex-between" style="flex-wrap:wrap;gap:16px">
+          <div>
+            <h3 style="margin-bottom:6px">🔒 Publishing requires a paid plan</h3>
+            <p class="muted" style="font-size:.92rem" id="planLockText">Upgrade to Basic (PKR 300/mo) to put your store live with a custom domain and checkout.</p>
+          </div>
+          <a href="billing.html" class="btn btn-primary">Upgrade now</a>
+        </div>
+      </div>
+
+      <!-- generator steps -->
+      <div class="publish-steps">
+        <div class="card step-card" data-step="1">
+          <div class="step-num">1</div>
+          <h4>Generate files</h4>
+          <p>HTML, CSS, JS + images for every page, built from your builder content.</p>
+        </div>
+        <div class="card step-card" data-step="2">
+          <div class="step-num">2</div>
+          <h4>Deploy to storage</h4>
+          <p>Uploaded to Supabase Storage with edge caching and free SSL.</p>
+        </div>
+        <div class="card step-card" data-step="3">
+          <div class="step-num">3</div>
+          <h4>Go live</h4>
+          <p>Your store is served at <b id="stepUrl">username.dualcore.shop</b>. Connect a custom domain anytime.</p>
+        </div>
+      </div>
+
+      <!-- deploy console -->
+      <div class="card" style="margin-top:20px">
+        <div class="flex-between" style="margin-bottom:14px">
+          <h3 style="font-size:1rem">Deploy log</h3>
+          <span class="badge badge-ghost" id="deployStatus">Idle</span>
+        </div>
+        <div class="publish-console" id="deployConsole">Waiting… press Publish to generate your storefront.</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/storefront.js"></script>
+  <script src="assets/js/generator.js"></script>
+  <script src="assets/js/publish.js"></script>
+</body>
+</html>

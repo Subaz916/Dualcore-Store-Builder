@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billing — DualCore</title>
+  <meta name="description" content="Manage your subscription plan, invoices and payment methods.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/pricing.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Billing & Plans</h1>
+          <p class="muted">Manage your subscription</p>
+        </div>
+      </div>
+
+      <!-- current plan summary -->
+      <div class="card" style="margin-bottom:24px;padding:26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px" id="billingSummary"></div>
+
+      <!-- upgrade plans -->
+      <h3 style="margin:28px 0 18px">Choose your plan</h3>
+      <div class="billing-plans" id="billingPlans"></div>
+
+      <!-- invoices -->
+      <h3 style="margin:28px 0 14px">Payment history</h3>
+      <div class="card invoice-list" id="invoiceList" style="padding:0"></div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/billing.js"></script>
+</body>
+</html>

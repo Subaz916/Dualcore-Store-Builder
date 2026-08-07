@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — DualCore</title>
+  <meta name="description" content="Sales, visitors, conversion and revenue analytics for your store.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Analytics</h1>
+          <p class="muted">Store performance over time</p>
+        </div>
+        <div class="page-actions">
+          <select class="select" id="rangeSelect" style="width:auto">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+          <button class="btn btn-ghost" id="exportAnalytics">⤓ Report</button>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="flexStatGrid"></div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="flex-between" style="margin-bottom:8px">
+          <h3 style="font-size:1.05rem">Visitors & Orders</h3>
+          <div class="flex gap-2 align-center">
+            <label class="flex align-center gap-1" style="font-size:.8rem;color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:var(--primary)"></i>Visitors</label>
+            <label class="flex align-center gap-1" style="font-size:.8rem;color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:var(--success)"></i>Orders</label>
+          </div>
+        </div>
+        <div class="chart-box"><div id="visitorsChart" class="chart-svg"></div></div>
+      </div>
+
+      <div class="dash-grid" style="margin-bottom:20px">
+        <div class="card">
+          <h3 style="font-size:1.05rem;margin-bottom:16px">Revenue</h3>
+          <div class="chart-box" style="height:220px"><div id="revenueChartAnalytics" class="chart-svg"></div></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1.05rem;margin-bottom:16px">Traffic sources</h3>
+          <div id="trafficChart" style="text-align:center"></div>
+          <div id="trafficLegend2" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <h3 style="font-size:1.05rem;margin-bottom:14px">Top products</h3>
+          <div id="topProductsAnalytics"></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:1.05rem;margin-bottom:14px">Conversion funnel</h3>
+          <div class="funnel" id="funnel"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/analytics.js"></script>
+</body>
+</html>

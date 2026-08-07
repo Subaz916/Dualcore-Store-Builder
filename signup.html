@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create your free store — DualCore</title>
+  <meta name="description" content="Start your free 3-day trial. No credit card required.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="no-splash">
+  <div class="auth-wrap">
+    <div class="grid-overlay"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-1" style="left:auto;right:-120px;top:-120px"></div>
+
+    <div class="auth-card">
+      <div class="text-center" style="margin-bottom:24px">
+        <a href="index.html" class="logo" style="justify-content:center">
+          <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span>
+          <span>DualCore</span>
+        </a>
+      </div>
+
+      <div class="card reveal visible" style="padding:36px">
+        <span class="badge badge-success" style="margin-bottom:12px">Free 3-day trial · no card required</span>
+        <h2 style="margin-bottom:6px">Create your store</h2>
+        <p class="muted" style="margin-bottom:24px;font-size:.95rem">It takes about 30 seconds.</p>
+
+        <form id="signupForm" novalidate>
+          <div class="field">
+            <label for="suName">Store / Owner name</label>
+            <input class="input" id="suName" type="text" required placeholder="e.g. Sana's Boutique" autocomplete="name">
+          </div>
+          <div class="field">
+            <label for="suEmail">Email</label>
+            <input class="input" id="suEmail" type="email" required placeholder="you@example.com" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="suPass">Password</label>
+            <div class="relative">
+              <input class="input" id="suPass" type="password" required placeholder="Min 8 characters" autocomplete="new-password" style="padding-right:44px">
+              <button type="button" id="suEye" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:8px;color:var(--muted)" aria-label="Toggle password">👁</button>
+            </div>
+            <div class="pw-meter" id="pwMeter"><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="field">
+            <label class="flex align-center gap-1" style="cursor:pointer;font-size:.9rem;color:var(--muted)">
+              <input type="checkbox" id="suTerms" required style="accent-color:var(--primary);width:15px;height:15px">
+              I agree to the <a href="#" onclick="return false">Terms</a> & <a href="#" onclick="return false">Privacy Policy</a>
+            </label>
+          </div>
+          <button class="btn btn-primary" type="submit" id="suBtn" style="width:100%;padding:14px">Create free store</button>
+        </form>
+
+        <div class="auth-divider">or sign up with</div>
+
+        <div class="flex" style="gap:10px">
+          <button class="btn btn-outline social-btn" id="suGoogle">
+            <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.6 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2.2-2 3.3-4.9 3.3-8.2z"/><path fill="#34A853" d="M12 23c2.7 0 5-.9 6.7-2.4l-3.6-2.7c-.9.6-2 1-3.1 1-2.4 0-4.4-1.6-5.1-3.8H3.2v2.8A9 9 0 0 0 12 23z"/><path fill="#FBBC05" d="M6.9 14a5.4 5.4 0 0 1 0-3.4V8h-3a9 9 0 0 0 0 8.1l3-2.1z"/><path fill="#EA4335" d="M12 5.4c1.5 0 2.8.5 3.8 1.5L19 3.5A9 9 0 0 0 3.9 8.6L7 10.7C7.7 9 9.7 7.5 12 7.4z"/></svg>
+            Google
+          </button>
+          <button class="btn btn-outline social-btn" id="suGithub">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.6.5.5 5.6.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C16.5 4.3 17.5 4.6 17.5 4.6c.6 1.6.3 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.6 18.4.5 12 .5z"/></svg>
+            GitHub
+          </button>
+        </div>
+
+        <p class="auth-footer-text">Already have an account? <a href="login.html" class="magic-link">Log in</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/signup.js"></script>
+</body>
+</html>

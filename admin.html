@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — DualCore</title>
+  <meta name="description" content="DualCore platform administration: users, stores and subscriptions.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="flex-between" style="margin-bottom:20px;gap:12px;flex-wrap:wrap">
+        <div>
+          <h1>Platform Admin</h1>
+          <p class="muted" id="adminMode">Loading platform data…</p>
+        </div>
+        <button class="btn btn-ghost" id="adminRefresh">🔄 Refresh</button>
+      </div>
+
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:20px">
+        <div class="card stat-card"><p class="muted">Registered users</p><h2 id="statUsers">–</h2></div>
+        <div class="card stat-card"><p class="muted">Stores created</p><h2 id="statStores">–</h2></div>
+        <div class="card stat-card"><p class="muted">Paid subscriptions</p><h2 id="statPaid">–</h2></div>
+        <div class="card stat-card"><p class="muted">Published stores</p><h2 id="statPublished">–</h2></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
+        <div class="card-head" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+          <b>Newest users</b>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>User</th><th>Email</th><th>Joined</th><th>Store</th><th>Plan</th><th>Status</th></tr></thead>
+            <tbody id="usersTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

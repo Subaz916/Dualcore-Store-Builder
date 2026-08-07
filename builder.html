@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Builder — DualCore</title>
+  <meta name="description" content="Visually design your online store. Drag sections, customize themes, preview on all devices.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/builder.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Store Builder</h1>
+          <p class="muted">Design your storefront visually. Changes auto-save.</p>
+        </div>
+        <div class="page-actions">
+          <div class="flex gap-2">
+            <button class="btn btn-ghost" id="undoBtn" title="Undo (⌘Z)" disabled>↶</button>
+            <button class="btn btn-ghost" id="redoBtn" title="Redo (⌘⇧Z)" disabled>↷</button>
+            <span class="divider" style="align-self:center;height:20px;border-left:1px solid var(--border)"></span>
+            <select class="select" id="deviceSelect" style="width:auto;min-width:140px" aria-label="Device preview">
+              <option value="desktop">💻 Desktop</option>
+              <option value="tablet">📱 Tablet</option>
+              <option value="mobile">📱 Mobile</option>
+            </select>
+          </div>
+          <div class="flex gap-2" style="margin-left:12px;border-left:1px solid var(--border);padding-left:16px">
+            <button class="btn btn-ghost" id="previewBtn" title="Full-screen preview (P)">Preview</button>
+            <button class="btn btn-primary" id="publishBtn">Publish</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEFT: Section library + settings -->
+      <div class="dash-grid" style="grid-template-columns:280px 1fr;gap:24px;align-items:start">
+        <aside id="builderSidebar" class="card" style="position:sticky;top:90px;height:fit-content">
+          <div class="tabs" id="builderTabs" role="tablist">
+            <button class="tab active" data-tab="sections" role="tab">Sections</button>
+            <button class="tab" data-tab="theme" role="tab">Theme</button>
+            <button class="tab" data-tab="settings" role="tab">Settings</button>
+          </div>
+
+          <!-- Sections panel -->
+          <div class="tab-panel" id="panelSections" style="display:block;max-height:calc(100vh - 200px);overflow:auto;padding:16px 0">
+            <div class="field" style="margin:16px">
+              <input class="input" type="search" placeholder="Search sections…" id="sectionSearch" aria-label="Search">
+            </div>
+            <div id="sectionLibrary"></div>
+          </div>
+
+          <!-- Theme panel -->
+          <div class="tab-panel" id="panelTheme" style="display:none;padding:16px 0;max-height:calc(100vh - 200px);overflow:auto">
+            <div class="field"><label>Theme</label>
+              <select class="select" id="themeSelect"></select></div>
+            <div class="field"><label>Primary color</label>
+              <input type="color" id="themePrimary" class="input" style="height:44px;padding:4px;border-radius:var(--radius)"></div>
+            <div class="field"><label>Font</label>
+              <select class="select" id="themeFont"></select></div>
+            <div class="field"><label>Corner radius</label>
+              <input type="range" id="themeRadius" min="4" max="28" value="16" style="width:100%"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:12px" id="applyTheme">Apply theme</button>
+          </div>
+
+          <!-- Settings panel -->
+          <div class="tab-panel" id="panelSettings" style="display:none;padding:16px 0">
+            <h3 style="margin-bottom:14px">Store settings</h3>
+            <div class="field"><label>Store name</label><input class="input" id="storeNameInput"></div>
+            <div class="field"><label>Tagline</label><input class="input" id="storeTaglineInput" placeholder="Beautiful products, fast delivery"></div>
+            <div class="field"><label>Favicon</label><input class="input" type="file" accept="image/*" id="storeFavicon"></div>
+            <div class="field"><label>Logo</label><input class="input" type="file" accept="image/*" id="storeLogo"></div>
+            <button class="btn btn-primary" style="width:100%" id="saveSettings">Save settings</button>
+          </div>
+        </aside>
+
+        <!-- RIGHT: Canvas -->
+        <section class="card" style="padding:0;overflow:hidden">
+          <div id="canvasWrap" style="position:relative;background:#f1f5f9;min-height:70vh;overflow:auto">
+            <!-- device frame -->
+            <div class="device-frame" id="deviceFrame">
+              <div class="device-header">
+                <div class="device-dots"><span></span><span></span><span></span></div>
+                <div class="device-url" id="deviceUrl">preview.dualcore.shop</div>
+              </div>
+              <div class="canvas" id="canvas" contenteditable="false" spellcheck="false">
+                <div class="canvas-placeholder" id="emptyCanvas">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;opacity:.4"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+                  <h3>Your store is empty</h3>
+                  <p class="muted">Drag sections from the left panel to start building</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section editor (when a section is selected) -->
+          <div id="sectionEditor" class="hidden" style="border-top:1px solid var(--border);padding:16px;background:var(--surface)">
+            <div class="flex-between" style="margin-bottom:16px">
+              <h3 id="editorTitle">Section settings</h3>
+              <button class="btn-ghost" id="closeEditor">×</button>
+            </div>
+            <div id="editorFields"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/storefront.js"></script>
+  <script src="assets/js/builder.js"></script>
+</body>
+</html>

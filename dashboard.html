@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — DualCore</title>
+  <meta name="description" content="Your store overview: revenue, orders, visitors and activity.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <!-- topbar injected -->
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Good {greeting}, <span id="dashUserName" class="gradient-text">Store Owner</span> 👋</h1>
+          <p>Here's what's happening in your store today.</p>
+        </div>
+        <div class="page-actions">
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="search" placeholder="Search products, orders…" id="dashSearch" aria-label="Search">
+          </div>
+          <a href="builder.html" class="btn btn-primary">⚡ Edit store</a>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="stat-grid" id="statGrid">
+        <div class="card stat-card skeleton"></div>
+        <div class="card stat-card skeleton"></div>
+        <div class="card stat-card skeleton"></div>
+        <div class="card stat-card skeleton"></div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="dash-grid">
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:8px">
+            <div>
+              <h3 style="font-size:1.05rem">Revenue</h3>
+              <p class="muted" style="font-size:.82rem">Last 30 days</p>
+            </div>
+            <div class="flex gap-2 align-center">
+              <label class="flex align-center gap-1" style="font-size:.8rem;color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:var(--primary)"></i>Revenue</label>
+              <label class="flex align-center gap-1" style="font-size:.8rem;color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:var(--success)"></i>Orders</label>
+            </div>
+          </div>
+          <div class="chart-box"><div id="revenueChart" class="chart-svg"></div></div>
+        </div>
+
+        <div class="dash-grid-side">
+          <div class="card">
+            <div class="flex-between">
+              <h3 style="font-size:1.05rem">Traffic sources</h3>
+              <button class="btn-icon" id="trafficMore" aria-label="More">⋯</button>
+            </div>
+            <div id="trafficDonut" style="margin:8px 0"></div>
+            <div id="trafficLegend"></div>
+          </div>
+          <div class="card">
+            <h3 style="font-size:1.05rem;margin-bottom:14px">Top products</h3>
+            <div id="topProducts"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div class="dash-grid" style="margin-top:20px">
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:10px">
+            <h3 style="font-size:1.05rem">Recent orders</h3>
+            <a href="orders.html" class="magic-link" style="font-size:.86rem">View all →</a>
+          </div>
+          <div class="table-wrap" style="max-height:420px;overflow:auto">
+            <table class="table">
+              <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+              <tbody id="recentOrders"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="card">
+            <div class="flex-between" style="margin-bottom:8px">
+              <h3 style="font-size:1.05rem">Recent activity</h3>
+              <a href="analytics.html" class="magic-link" style="font-size:.86rem">Analytics</a>
+            </div>
+            <div id="activityFeed"></div>
+          </div>
+          <div class="card">
+            <h3 style="font-size:1.05rem;margin-bottom:16px">Quick actions</h3>
+            <div class="quick-actions">
+              <a class="quick-action" href="products.html?new=1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Add product
+              </a>
+              <a class="quick-action" href="publish.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v14m-5-5 5 5 5-5M5 22h14"/></svg>
+                Publish store
+              </a>
+              <a class="quick-action" href="billing.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h20v10H2zM6 12h4"/></svg>
+                Upgrade plan
+              </a>
+              <a class="quick-action" href="store.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/></svg>
+                Preview store
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>

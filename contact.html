@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact — DualCore Store Builder</title>
+  <meta name="description" content="Questions, feedback or need help with your store? The DualCore team replies within one business day.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+</head>
+<body>
+  <section class="page-hero">
+    <div class="blob blob-2" style="opacity:.18"></div>
+    <div class="container" style="position:relative;z-index:1">
+      <span class="eyebrow reveal">✉ Contact</span>
+      <h1 class="reveal" data-delay="1">Talk to a human, <span class="gradient-text">fast.</span></h1>
+      <p class="reveal" data-delay="2">We reply to every message within one business day.</p>
+    </div>
+  </section>
+
+  <section class="section-sm">
+    <div class="container">
+      <div class="grid grid-2" style="gap:40px;align-items:start">
+        <div class="reveal">
+          <form id="contactForm" class="card" novalidate>
+            <h3 style="margin-bottom:20px">Send us a message</h3>
+            <div class="grid grid-2" style="gap:0 14px">
+              <div class="field">
+                <label for="cfName">Name</label>
+                <input class="input" id="cfName" type="text" required placeholder="Your name">
+              </div>
+              <div class="field">
+                <label for="cfEmail">Email</label>
+                <input class="input" id="cfEmail" type="email" required placeholder="you@example.com">
+              </div>
+            </div>
+            <div class="field">
+              <label for="cfTopic">Topic</label>
+              <select class="select" id="cfTopic">
+                <option>General question</option>
+                <option>Help with my store</option>
+                <option>Billing & plans</option>
+                <option>Feature request</option>
+                <option>Something else</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cfMsg">Message</label>
+              <textarea class="textarea" id="cfMsg" rows="5" required placeholder="How can we help?"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit" id="cfSubmit">Send message</button>
+          </form>
+        </div>
+
+        <div class="reveal" data-delay="1">
+          <div class="card" style="margin-bottom:20px">
+            <h3 style="margin-bottom:16px">Direct lines</h3>
+            <ul class="plan-feats">
+              <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M4 4h16v16H4zM4 6l8 6 8-6"/></svg> support@dualcore.shop</li>
+              <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.6 2z"/></svg> +92 300 0000000</li>
+              <li><svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Karachi, Pakistan — remote worldwide</li>
+            </ul>
+          </div>
+          <div class="card" style="background:linear-gradient(135deg,rgba(92,110,255,.08),rgba(0,200,150,.08));border:1px solid rgba(92,110,255,.2)">
+            <h3 style="margin-bottom:8px">⚡ Faster answer?</h3>
+            <p class="muted" style="font-size:.92rem;margin-bottom:16px">Check the FAQ or browse the help docs. Premium customers get priority replies.</p>
+            <a href="pricing.html" class="btn btn-outline btn-sm">See plans</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="index.html" class="logo" style="color:#fff;margin-bottom:16px">
+            <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></span><span>DualCore</span>
+          </a>
+          <p>Create, customize and launch a beautiful online store. No code, no limits.</p>
+        </div>
+        <div>
+          <h4>Products</h4>
+          <a href="builder.html">Store Builder</a><a href="templates.html">Themes</a><a href="features.html">Features</a><a href="pricing.html">Pricing</a>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <a href="about.html">About</a><a href="contact.html">Contact</a>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="#" onclick="return false">Privacy Policy</a><a href="#" onclick="return false">Terms of Service</a><a href="#" onclick="return false">Refund Policy</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 DualCore Store Builder. All rights reserved.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/components/navbar.js"></script>
+  <script src="assets/js/contact.js"></script>
+</body>
+</html>
