@@ -78,13 +78,27 @@ const Utils = (() => {
     remove(key) { try { localStorage.removeItem(key); } catch {} },
   };
 
-  /* ---------- Storage abstraction: Supabase OR demo localStorage ---------- */
+  /* ---------- Storage abstraction: Supabase OR demo localStorage ----------
+     Robust: the Supabase branch never throws. On ANY error it logs a
+     warning and falls back to the local (demo) implementation, so pages
+     always render even if a table / RLS policy / column is missing.  */
+  const demoSel = (table, opts = {}) => {
+    let rows = store.get("dc_" + table, []);
+    if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) rows = rows.filter(r => r[k] === v);
+    if (opts.order) rows.sort((a, b) => opts.asc ? (a[opts.order] > b[opts.order] ? 1 : -1) : (a[opts.order] < b[opts.order] ? 1 : -1));
+    if (opts.limit) rows = rows.slice(0, opts.limit);
+    return rows;
+  };
+  const warn = (table, err) => console.warn("[DualCore] " + table + " → demo fallback:", err?.message || err);
+
   const db = {
     async insert(table, row) {
       if (window.supa) {
-        const { error } = await window.supa.from(table).insert(row);
-        if (error) throw error;
-        return row;
+        try {
+          const { error } = await window.supa.from(table).insert(row);
+          if (error) { warn(table, error); }
+          else return row;
+        } catch (err) { warn(table, err); }
       }
       const rows = store.get("dc_" + table, []);
       rows.push(row); store.set("dc_" + table, rows);
@@ -92,25 +106,25 @@ const Utils = (() => {
     },
     async select(table, opts = {}) {
       if (window.supa) {
-        let q = window.supa.from(table).select(opts.cols || "*");
-        if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
-        if (opts.order) q = q.order(opts.order, { ascending: !!opts.asc });
-        if (opts.limit) q = q.limit(opts.limit);
-        const { data, error } = await q;
-        if (error) throw error;
-        return data || [];
+        try {
+          let q = window.supa.from(table).select(opts.cols || "*");
+          if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
+          if (opts.order) q = q.order(opts.order, { ascending: !!opts.asc });
+          if (opts.limit) q = q.limit(opts.limit);
+          const { data, error } = await q;
+          if (error) throw error;
+          if (data) return data;
+        } catch (err) { warn(table, err); }
       }
-      let rows = store.get("dc_" + table, []);
-      if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) rows = rows.filter(r => r[k] === v);
-      if (opts.order) rows.sort((a, b) => opts.asc ? (a[opts.order] > b[opts.order] ? 1 : -1) : (a[opts.order] < b[opts.order] ? 1 : -1));
-      if (opts.limit) rows = rows.slice(0, opts.limit);
-      return rows;
+      return demoSel(table, opts);
     },
     async update(table, match, patch) {
       if (window.supa) {
-        const { error } = await window.supa.from(table).update(patch).match(match);
-        if (error) throw error;
-        return patch;
+        try {
+          const { error } = await window.supa.from(table).update(patch).match(match);
+          if (!error) return patch;
+          warn(table, error);
+        } catch (err) { warn(table, err); }
       }
       const rows = store.get("dc_" + table, []);
       const i = rows.findIndex(r => Object.entries(match).every(([k, v]) => r[k] === v));
@@ -119,17 +133,21 @@ const Utils = (() => {
     },
     async remove(table, match) {
       if (window.supa) {
-        const { error } = await window.supa.from(table).delete().match(match);
-        if (error) throw error;
-        return;
+        try {
+          const { error } = await window.supa.from(table).delete().match(match);
+          if (!error) return;
+          else warn(table, error);
+        } catch (err) { warn(table, err); }
       }
       store.set("dc_" + table, store.get("dc_" + table, []).filter(r => !Object.entries(match).every(([k, v]) => r[k] === v)));
     },
     async upsert(table, rows) {
       if (window.supa) {
-        const { error } = await window.supa.from(table).upsert(rows);
-        if (error) throw error;
-        return rows;
+        try {
+          const { error } = await window.supa.from(table).upsert(rows);
+          if (!error) return rows;
+          else warn(table, error);
+        } catch (err) { warn(table, err); }
       }
       const all = store.get("dc_" + table, []);
       for (const r of rows) {
@@ -233,8 +251,13 @@ const Utils = (() => {
 
   const isSignedIn = async () => {
     if (window.supa) {
-      const { data } = await window.supa.auth.getUser();
-      return !!data?.user;
+      try {
+        const { data } = await window.supa.auth.getUser();
+        return !!data?.user;
+      } catch (err) {
+        console.warn("[DualCore] isSignedIn → demo check:", err?.message || err);
+      }
+      return !!getLocalUser();
     }
     return !!getLocalUser();
   };
