@@ -250,18 +250,29 @@ const Utils = (() => {
   const getLocalUser = () => store.get("dc_user");
 
   const isSignedIn = async () => {
+    // 1) The local mirror is the single source of truth — synchronous,
+    //    set at login/signup before any navigation. No waiting on the
+    //    Supabase client's async session recovery, so no false "guest".
+    if (getLocalUser()) return true;
+    // 2) In Supabase mode without a mirror, trust getSession() (local read)
+    //    — only then consider a network getUser() refresh.
     if (window.supa) {
       try {
-        // getSession() reads the persisted session from localStorage —
-        // NO network call, so it never fails on flaky networks.
         const { data } = await window.supa.auth.getSession();
-        if (data?.session?.user) return true;
+        if (data?.session?.user) {
+          const su = data.session.user;
+          const meta = { id: su.id, email: su.email, name: su.user_metadata?.name || su.email?.split("@")[0] || "Store Owner", created_at: su.created_at || new Date().toISOString() };
+          store.set("dc_user", meta);
+          store.set("dc_session", meta);
+          return true;
+        }
       } catch (err) {
-        console.warn("[DualCore] isSignedIn → demo check:", err?.message || err);
+        console.warn("[DualCore] isSignedIn → mirror-only:", err?.message || err);
       }
-      return !!getLocalUser();
+      // never bounce on a flaky network — only trust the mirror + session
+      return false;
     }
-    return !!getLocalUser();
+    return false;
   };
 
   return {

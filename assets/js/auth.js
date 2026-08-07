@@ -18,16 +18,14 @@ const Auth = (() => {
     store.set("dc_session", meta);
   };
 
-  /* ---------- Session persistence (keeps local mirror in sync) ---------- */
+  /* ---------- Session persistence (keeps local mirror in sync) ----------
+     NOTE: never remove the mirror on transient events (a fresh page load
+     can fire SIGNED_OUT while the SDK recovers the session) — the mirror
+     is only cleared by an explicit signOut(). */
   const persist = () => {
     if (!window.supa || !window.supa.auth.onAuthStateChange) return;
     window.supa.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") {
-        store.remove("dc_user");
-        store.remove("dc_session");
-      } else if (session?.user) {
-        mirrorUser(session.user);
-      }
+      if (session?.user) mirrorUser(session.user);
     });
   };
 
