@@ -16,7 +16,7 @@
   const sub = await Auth.getSubscription(user.id);
 
   const slug = shop.slug || Utils.toSlug(shop.name || "mystore") || "mystore";
-  const domain = slug + "." + APP_CONFIG.PLATFORM_DOMAIN;
+  const domain = "https://dualcore-store-builder.vercel.app/" + slug;
 
   $("#publishStoreName").textContent = shop.name || "My Store";
   $("#publishUrl").childNodes[0].nodeValue = domain + " ";
@@ -112,7 +112,7 @@
       Utils.store.set("dc_shop", { ...shop, status: "published", published_at: publishedAt });
 
       // 4. Done
-      log(`🎉 Store is LIVE at https://${domain}`, "ok");
+      log(`🎉 Store is LIVE at ${domain}`, "ok");
       $("#deployStatus").textContent = "Published ✓";
       $("#deployStatus").className = "badge badge-success";
       btn.disabled = false;

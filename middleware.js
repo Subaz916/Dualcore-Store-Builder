@@ -1,7 +1,6 @@
 const SUPABASE_URL = 'https://vtmjewwatshbdermcpyc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0bWpld3dhdHNoYmRlcm1jcHljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNzYyNTksImV4cCI6MjEwMTY1MjI1OX0.dZnIzEgmrtcKF6bJrxInDhZwC0sM7ri8Dci7GAQsa_Q';
 const BUCKET = 'storefronts';
-const PLATFORM_DOMAIN = 'dualcore.shop';
 
 function getContentType(path) {
   if (path.endsWith('.html')) return 'text/html; charset=utf-8';
@@ -47,25 +46,39 @@ async function supabaseDownload(path) {
   return res;
 }
 
+// App routes that should NOT be treated as store slugs
+const APP_ROUTES = new Set([
+  '', 'index.html', 'login.html', 'signup.html', 'forgot-password.html',
+  'dashboard.html', 'builder.html', 'store.html', 'publish.html',
+  'products.html', 'orders.html', 'customers.html', 'analytics.html',
+  'templates.html', 'billing.html', 'settings.html', 'admin.html',
+  'features.html', 'about.html', 'contact.html', 'pricing.html'
+]);
+
 export default async function middleware(request) {
   const url = new URL(request.url);
-  const hostname = url.hostname;
   const pathname = url.pathname;
 
-  // Skip if not a subdomain of our platform domain
-  if (!hostname.endsWith(`.${PLATFORM_DOMAIN}`) || hostname === PLATFORM_DOMAIN) {
+  // Skip API, assets, static files, favicon
+  if (pathname.startsWith('/api') || pathname.startsWith('/assets') ||
+      pathname.startsWith('/_next') || pathname === '/favicon.ico') {
     return;
   }
 
-  // Extract slug from subdomain (e.g., "mystore.dualcore.shop" -> "mystore")
-  const slug = hostname.replace(`.${PLATFORM_DOMAIN}`, '');
-  if (!slug || slug === 'www') {
+  // Extract first path segment as potential slug
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 0) return; // root path - let app handle
+
+  const slug = segments[0];
+
+  // Skip if it's a known app route (has .html extension or in APP_ROUTES)
+  if (slug.endsWith('.html') || APP_ROUTES.has(slug)) {
     return;
   }
 
-  // Determine the file path
-  let filePath = pathname === '/' ? 'index.html' : pathname.slice(1);
-  if (!filePath) filePath = 'index.html';
+  // Determine the file path within the store
+  let filePath = segments.length > 1 ? segments.slice(1).join('/') : 'index.html';
+  if (!filePath || filePath.endsWith('/')) filePath += 'index.html';
 
   try {
     // Find which user_id owns this slug by listing bucket root folders
@@ -78,7 +91,6 @@ export default async function middleware(request) {
     let userId = null;
     if (listRes?.folders) {
       for (const folder of listRes.folders) {
-        // folder.name is user_id
         const userListRes = await supabaseRequest('POST', '/object/list/', {
           bucket: BUCKET,
           prefix: folder.name + '/',
@@ -92,7 +104,7 @@ export default async function middleware(request) {
     }
 
     if (!userId) {
-      return;
+      return; // Not a store slug - let app handle (404 or SPA)
     }
 
     // Fetch the file from Supabase Storage
