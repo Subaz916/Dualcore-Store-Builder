@@ -71,26 +71,34 @@
     format: (v) => "PKR " + Utils.fmtShort(v),
   });
 
-  /* ---------- Traffic donut ---------- */
-  const traffic = [
-    { label: "Direct", value: 46, color: "#5C6EFF" },
-    { label: "Search", value: 29, color: "#7C4DFF" },
-    { label: "Social", value: 15, color: "#00C896" },
-    { label: "Referral", value: 10, color: "#F59E0B" },
-  ];
-  Charts.donut($("#trafficDonut"), { data: traffic });
-  $("#trafficLegend").innerHTML = traffic.map(t => `
+  /* ---------- Orders by status (real data, no fake sources) ---------- */
+  const statusColors = { paid: "#5C6EFF", shipped: "#00C896", pending: "#F59E0B", cancelled: "#EF4444", refunded: "#10B981" };
+  const traffic = Object.entries(statusColors).map(([s, color]) => ({
+    label: s[0].toUpperCase() + s.slice(1), color,
+    value: orders.filter(o => o.status === s).reduce((sum, o) => sum + o.total, 0),
+  })).filter(t => t.value > 0);
+  if (traffic.length) {
+    Charts.donut($("#trafficDonut"), { data: traffic, format: (v) => Utils.fmtShort(v) });
+    $("#trafficLegend").innerHTML = traffic.map(t => `
     <div class="flex-between" style="padding:7px 0;font-size:.86rem">
       <span class="flex align-center gap-1" style="color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:${t.color}"></i>${t.label}</span>
-      <b>${t.value}%</b>
+      <b>${Utils.fmtShort(t.value)}</b>
     </div>`).join("");
+  } else {
+    $("#trafficDonut").innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:190px;text-align:center;color:var(--muted);font-size:.85rem">No orders yet.<br>Revenue by status will show here.</div>`;
+    $("#trafficLegend").innerHTML = "";
+  }
 
   /* ---------- Top products ---------- */
-  $("#topProducts").innerHTML = products.slice(0, 4).map((p, i) => {
-    const sold = Utils.randInt(12, 120 + i * 20);
-    const max = 180;
+  const soldByProduct = {};
+  orders.forEach(o => (o.items || []).forEach(it => { soldByProduct[it.id] = (soldByProduct[it.id] || 0) + 1; }));
+  const topProducts = products
+    .map(p => ({ p, sold: soldByProduct[p.id] || 0 }))
+    .sort((a, b) => b.sold - a.sold).slice(0, 4);
+  $("#topProducts").innerHTML = topProducts.length ? topProducts.map(({ p, sold }, i) => {
+    const max = Math.max(1, ...topProducts.map(t => t.sold));
     return `
-    <div style="padding:10px 0;border-bottom:1px dashed var(--border);${i === 3 ? "border:none" : ""}">
+    <div style="padding:10px 0;border-bottom:1px dashed var(--border);${i === topProducts.length - 1 ? "border:none" : ""}">
       <div class="flex-between" style="margin-bottom:8px">
         <div class="td-flex"><span class="thumb-sm-ph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2z"/></svg></span>
           <span class="td-title" style="font-size:.88rem">${Utils.esc(p.name)}</span>
@@ -99,7 +107,7 @@
       </div>
       <div class="progress-bar"><span style="width:${(sold / max) * 100}%;background:linear-gradient(90deg,#5C6EFF,#7C4DFF)"></span></div>
     </div>`;
-  }).join("");
+  }).join("") : `<div class="empty-state" style="grid-column:1/-1;border:none"><div class="empty-icon" style="opacity:.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v9H4v-9M2 7h20v5H2z"/></svg></div><p style="margin-top:8px">No products yet — add products to see top sellers.</p></div>`;
 
   /* ---------- Recent orders ---------- */
   const badgeCls = { paid: "badge-success", pending: "badge-warn", shipped: "badge-primary", cancelled: "badge-danger", refunded: "badge-ghost" };
@@ -114,28 +122,29 @@
       <td class="muted">${Utils.timeAgo(o.created_at)}</td>
     </tr>`).join("");
 
-  /* ---------- Activity ---------- */
+  /* ---------- Activity (derived from real orders; empty state when none) ---------- */
   const actIcons = {
     order: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2z"/></svg>', "#5C6EFF"],
     visitor: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>', "#7C4DFF"],
     sale: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3"/></svg>', "#00C896"],
     tip: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>', "#F59E0B"],
   };
-  const actData = [
-    ["sale", "New sale — PKR 4,999", "Aurora Silk Dress was purchased", 0.3],
-    ["order", "New order received", "Bilal Ahmed · 2 items", 2.1],
-    ["visitor", "43 new visitors today", "Traffic up 18% vs yesterday", 5.4],
-    ["tip", "SEO score improved to 92", "Great product descriptions!", 24.2],
-    ["sale", "New sale — PKR 1,250", "Artisan Espresso Blend ×2", 30.1],
-  ];
-  $("#activityFeed").innerHTML = actData.map(([t, title, desc, hrs]) => {
+  const actRows = orders.slice(0, 5).map(o => [
+    "order", "New order received", `${o.customer_name} · ${o.items.length} item${o.items.length === 1 ? "" : "s"} · ${Utils.fmtMoney(o.total)}`, o.created_at,
+  ]);
+  $("#activityFeed").innerHTML = actRows.length ? actRows.map(([t, title, desc, ts]) => {
     const [ic, color] = actIcons[t];
     return `<div class="activity-item">
       <span class="activity-dot" style="background:${color}18;color:${color}">${ic}</span>
-      <div><b>${title}</b><p>${desc}</p></div>
-      <span class="activity-time">${hrs < 1 ? "just now" : hrs + "h ago"}</span>
+      <div><b>${title} #${oId(ts)}</b><p>${desc}</p></div>
+      <span class="activity-time">${Utils.timeAgo(ts)}</span>
     </div>`;
-  }).join("");
+  }).join("") : `<div class="empty-state" style="grid-column:1/-1;border:none"><div class="empty-icon" style="opacity:.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12v9H4v-9M2 7h20v5H2z"/></svg></div><p style="margin-top:8px">No activity yet — sales and orders will appear here.</p></div>`;
+
+  function oId(ts) {
+    const o = orders.find(x => x.created_at === ts);
+    return o ? o.id.slice(-6).toUpperCase() : "";
+  }
 
   /* ---------- Notifications badge ---------- */
   const notifs = DemoData.getNotifications(user);

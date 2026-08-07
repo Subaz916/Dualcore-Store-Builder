@@ -48,7 +48,7 @@ const Auth = (() => {
     if (users.some(u => u.email === email)) throw new Error("An account with this email already exists.");
     users.push(user); Utils.store.set("dc_users", users);
     Utils.store.set("dc_user", user);
-    await seedNewUser(user.id);
+    await dbNewUser(user.id);
     return { data: { user }, needsVerification: false };
   };
 

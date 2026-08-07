@@ -19,7 +19,7 @@
       : customers;
     $("#customerCount").textContent = `${list.length} customers`;
 
-    $("#customersTable").innerHTML = list.map(c => {
+    $("#customersTable").innerHTML = list.length ? list.map(c => {
       const lastOrder = orders.find(o => o.customer_email === c.email);
       const status = c.orders_count > 3 ? "VIP" : c.orders_count > 0 ? "active" : "new";
       const badge = { VIP: "badge-violet", active: "badge-success", new: "badge-primary" }[status];
@@ -41,7 +41,7 @@
         <td><span class="badge ${badge}">${status}</span></td>
         <td><button class="btn btn-ghost btn-sm customer-view" data-email="${c.email}">View</button></td>
       </tr>`;
-    }).join("") || `<tr><td colspan="7" style="text-align:center;padding:50px;color:var(--muted)">No customers found</td></tr>`;
+    }).join("") : `<tr><td colspan="7" style="text-align:center;padding:50px;color:var(--muted)">No customers found</td></tr>`;
 
     $("#customersTable").querySelectorAll(".customer-view").forEach(b => {
       b.onclick = () => {

@@ -67,23 +67,31 @@
     });
 
     // donut
-    const traffic = [
-      { label: "Direct", value: 46, color: "#5C6EFF" },
-      { label: "Search", value: 29, color: "#7C4DFF" },
-      { label: "Social", value: 15, color: "#00C896" },
-      { label: "Referral", value: 10, color: "#F59E0B" },
-    ];
-    Charts.donut($("#trafficDonut"), { data: traffic, size: 150, thickness: 18 });
-    $("#trafficLegend2").innerHTML = traffic.map(t => `
+    // orders by status donut (real revenue, no fake sources)
+    const statusColors = { paid: "#5C6EFF", shipped: "#00C896", pending: "#F59E0B", cancelled: "#EF4444", refunded: "#10B981" };
+    const traffic = Object.entries(statusColors).map(([s, color]) => ({
+      label: s[0].toUpperCase() + s.slice(1), color,
+      value: orders.filter(o => o.status === s).reduce((sum, o) => sum + o.total, 0),
+    })).filter(t => t.value > 0);
+    if (traffic.length) {
+      Charts.donut($("#trafficDonut"), { data: traffic, size: 150, thickness: 18, format: (v) => Utils.fmtShort(v) });
+      $("#trafficLegend2").innerHTML = traffic.map(t => `
       <div class="flex-between" style="padding:6px 0;font-size:.85rem">
         <span class="flex align-center gap-1" style="color:var(--muted)"><i style="width:10px;height:10px;border-radius:3px;background:${t.color}"></i>${t.label}</span>
-        <b>${t.value}%</b>
+        <b>${Utils.fmtShort(t.value)}</b>
       </div>`).join("");
+    } else {
+      $("#trafficDonut").innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:150px;color:var(--muted);font-size:.85rem;text-align:center">No orders yet</div>`;
+      $("#trafficLegend2").innerHTML = "";
+    }
 
-    // top products
-    $("#topProductsAnalytics").innerHTML = products.slice(0, 5).map((p, i) => {
-      const sold = Utils.randInt(20, 160 - i * 10);
-      return `
+    // top products (real sold counts from orders)
+    const soldByProduct = {};
+    orders.forEach(o => (o.items || []).forEach(it => { soldByProduct[it.id] = (soldByProduct[it.id] || 0) + 1; }));
+    $("#topProductsAnalytics").innerHTML = products
+      .map(p => ({ p, sold: soldByProduct[p.id] || 0 }))
+      .sort((a, b) => b.sold - a.sold).slice(0, 5)
+      .map(({ p, sold }, i) => `
       <div class="flex-between" style="padding:11px 0;border-bottom:1px dashed var(--border);${i === 4 ? "border:none" : ""}">
         <div class="td-flex">
           <span style="width:26px;font-weight:800;font-family:var(--font-display);color:var(--muted)">${i + 1}</span>
@@ -91,8 +99,7 @@
           <span class="td-title" style="font-size:.88rem">${Utils.esc(p.name)}</span>
         </div>
         <div class="flex align-center gap-2"><b style="font-size:.88rem">${sold}</b><span class="muted" style="font-size:.75rem">sold</span></div>
-      </div>`;
-    }).join("");
+      </div>`).join("") || `<div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">No products yet</div>`;
 
     // funnel
     const visitors = days.slice(-range).reduce((s, d) => s + d.visitors, 0);
