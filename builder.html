@@ -25,6 +25,9 @@
         </div>
         <div class="page-actions">
           <div class="flex gap-2">
+            <button class="btn btn-ghost canvas-toggle" id="canvasToggle" style="display:none" aria-label="Open sidebar" title="Sidebar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:20px;height:20px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
             <button class="btn btn-ghost" id="undoBtn" title="Undo (⌘Z)" disabled>↶</button>
             <button class="btn btn-ghost" id="redoBtn" title="Redo (⌘⇧Z)" disabled>↷</button>
             <span class="divider" style="align-self:center;height:20px;border-left:1px solid var(--border)"></span>
@@ -68,6 +71,12 @@
               <select class="select" id="themeFont"></select></div>
             <div class="field"><label>Corner radius</label>
               <input type="range" id="themeRadius" min="4" max="28" value="16" style="width:100%"></div>
+            <div class="field"><label>Button style</label>
+              <select class="select" id="themeButtonStyle">
+                <option value="rounded">Rounded</option>
+                <option value="sharp">Sharp</option>
+                <option value="pill">Pill</option>
+              </select></div>
             <button class="btn btn-primary" style="width:100%;margin-top:12px" id="applyTheme">Apply theme</button>
           </div>
 
@@ -78,7 +87,14 @@
             <div class="field"><label>Tagline</label><input class="input" id="storeTaglineInput" placeholder="Beautiful products, fast delivery"></div>
             <div class="field"><label>Favicon</label><input class="input" type="file" accept="image/*" id="storeFavicon"></div>
             <div class="field"><label>Logo</label><input class="input" type="file" accept="image/*" id="storeLogo"></div>
+            <div class="field"><label>Social image (OG)</label><input class="input" type="file" accept="image/*" id="storeSocialImage"></div>
             <button class="btn btn-primary" style="width:100%" id="saveSettings">Save settings</button>
+
+            <h3 style="margin:24px 0 14px">SEO & Meta</h3>
+            <div class="field"><label>Meta title</label><input class="input" id="seoTitle" placeholder="Store name | Tagline"></div>
+            <div class="field"><label>Meta description</label><textarea class="textarea" id="seoDescription" rows="2" placeholder="Brief description for search results"></textarea></div>
+            <div class="field"><label>Custom domain</label><input class="input" id="customDomain" placeholder="shop.example.com"></div>
+            <button class="btn btn-primary" style="width:100%" id="saveSeo">Save SEO</button>
           </div>
         </aside>
 
@@ -108,6 +124,9 @@
               <button class="btn-ghost" id="closeEditor">×</button>
             </div>
             <div id="editorFields"></div>
+            <div class="editor-divider"></div>
+            <h4 style="margin:16px 0 8px;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Section style</h4>
+            <div id="sectionStyleFields"></div>
           </div>
         </section>
       </div>

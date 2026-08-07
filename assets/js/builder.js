@@ -21,6 +21,7 @@
       { type: "faq", label: "FAQ", desc: "Questions & answers" },
       { type: "newsletter", label: "Newsletter", desc: "Email signup" },
       { type: "contact", label: "Contact", desc: "Contact form" },
+      { type: "footer", label: "Footer", desc: "Store footer with links" },
     ]},
   ];
 
@@ -72,7 +73,21 @@
     contact: [
       { key: "title", label: "Section title", type: "text" },
     ],
+    footer: [
+      { key: "title", label: "Section title", type: "text" },
+      { key: "description", label: "Description", type: "textarea" },
+    ],
   };
+
+  const SECTION_STYLE_SCHEMA = [
+    { key: "paddingTop", label: "Padding top", type: "select", options: [["none", "None"], ["sm", "Small (32px)"], ["md", "Medium (64px)"], ["lg", "Large (96px)"], ["xl", "Extra large (128px)"]] },
+    { key: "paddingBottom", label: "Padding bottom", type: "select", options: [["none", "None"], ["sm", "Small (32px)"], ["md", "Medium (64px)"], ["lg", "Large (96px)"], ["xl", "Extra large (128px)"]] },
+    { key: "background", label: "Background", type: "select", options: [["transparent", "Transparent"], ["white", "White"], ["soft", "Theme soft"], ["accent", "Theme accent"], ["dark", "Dark"]] },
+    { key: "bgColor", label: "Custom bg color", type: "color" },
+    { key: "textColor", label: "Text color", type: "select", options: [["default", "Default"], ["light", "Light (on dark)"], ["muted", "Muted"]] },
+    { key: "fullWidth", label: "Full width (no container)", type: "checkbox" },
+    { key: "divider", label: "Show bottom divider", type: "checkbox" },
+  ];
 
   let sections = [];
   let history = [];
@@ -142,11 +157,12 @@
       faq: { title: "Frequently asked questions" },
       newsletter: { title: "Join our list", subtitle: "Get 10% off your first order." },
       contact: { title: "Get in touch" },
+      footer: { title: "Footer", description: "Beautiful products, delivered fast. Built with DualCore." },
     };
     return { ...base, ...(seed[type] || {}) };
   };
 
-  const defaultTitle = (t) => ({ hero: "Hero", products: "Products", categories: "Categories", testimonials: "Testimonials", gallery: "Gallery", video: "Video", faq: "FAQ", newsletter: "Newsletter", contact: "Contact" }[t] || "Section");
+  const defaultTitle = (t) => ({ hero: "Hero", products: "Products", categories: "Categories", testimonials: "Testimonials", gallery: "Gallery", video: "Video", faq: "FAQ", newsletter: "Newsletter", contact: "Contact", footer: "Footer" }[t] || "Section");
 
   /* ---------- Render canvas ---------- */
   const renderCanvas = () => {
@@ -263,7 +279,21 @@
         fields.push(`<div class="editor-field"><label>${f.label}</label><input class="input" type="text" id="fld-${f.key}" value="${Utils.esc(s[f.key] || "")}"></div>`);
       }
     }
+
+    // Image upload for hero and gallery
+    if (s.type === "hero") {
+      fields.push(renderImageUpload("image", s.image, "Hero background image"));
+    }
+    if (s.type === "gallery") {
+      fields.push(renderImageUpload("images", s.images, "Gallery images (multiple)"));
+    }
+
     $("#editorFields").innerHTML = fields.join("");
+
+    // Image upload listeners
+    if (s.type === "hero" || s.type === "gallery") {
+      bindImageUploads(s);
+    }
 
     // listeners
     $$("#editorFields input, #editorFields select, #editorFields textarea").forEach(el => {
@@ -282,6 +312,118 @@
         pushHistory();
         renderCanvas();
         selectSection(selectedId); // re-render editor with saved values
+        autosave();
+      });
+    });
+
+    // Render section style fields
+    renderSectionStyles(s);
+  };
+
+  /* ---------- Image upload helpers ---------- */
+  const renderImageUpload = (key, currentValue, label) => {
+    const images = Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []);
+    return `
+      <div class="editor-field">
+        <label>${label}</label>
+        <div class="image-upload" data-key="${key}">
+          <button type="button" class="upload-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            ${images.length ? "Change image" : "Upload image"}
+          </button>
+          <input type="file" accept="image/*" ${images.length > 1 ? "multiple" : ""} data-target="${key}">
+          <div class="upload-preview">
+            ${images.map((img, i) => `<div class="preview-item"><img src="${img}" alt="Preview ${i+1}"><button type="button" class="remove-img" data-index="${i}">×</button></div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  };
+
+  const bindImageUploads = (section) => {
+    $$(".image-upload").forEach(upload => {
+      const key = upload.dataset.key;
+      const btn = upload.querySelector(".upload-btn");
+      const input = upload.querySelector("input[type=file]");
+      const preview = upload.querySelector(".upload-preview");
+
+      btn.onclick = () => input.click();
+
+      input.onchange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        btn.innerHTML = `<span class="loader-inline"></span> Uploading...`;
+        btn.disabled = true;
+
+        try {
+          const urls = await Promise.all(files.map(f => Utils.uploadFile(f, "sections")));
+          const s2 = sections.find(x => x.id === selectedId);
+          if (key === "images") {
+            s2.images = [...(s2.images || []), ...urls];
+          } else {
+            s2[key] = urls[0];
+          }
+          pushHistory();
+          renderCanvas();
+          selectSection(selectedId);
+          toast("success", "Image uploaded");
+        } catch (err) {
+          toast("error", "Upload failed: " + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Change image`;
+        }
+      };
+
+      // Remove image
+      preview?.addEventListener("click", (e) => {
+        const removeBtn = e.target.closest(".remove-img");
+        if (!removeBtn) return;
+        const index = parseInt(removeBtn.dataset.index);
+        const s2 = sections.find(x => x.id === selectedId);
+        if (key === "images") {
+          s2.images.splice(index, 1);
+        } else {
+          s2[key] = null;
+        }
+        pushHistory();
+        renderCanvas();
+        selectSection(selectedId);
+        toast("info", "Image removed");
+      });
+    });
+  };
+
+  /* ---------- Section style fields ---------- */
+  const renderSectionStyles = (s) => {
+    const style = s.style || {};
+    const fields = SECTION_STYLE_SCHEMA.map(f => {
+      const val = style[f.key] ?? (f.type === "checkbox" ? false : (f.options?.[0]?.[0] || ""));
+      if (f.type === "select") {
+        return `<div class="section-style-field"><label>${f.label}</label>
+          <select class="select" id="style-${f.key}">${f.options.map(([v, l]) => `<option value="${v}" ${val === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>`;
+      } else if (f.type === "color") {
+        return `<div class="section-style-field"><label>${f.label}</label>
+          <div class="color-row"><input type="color" class="input" id="style-${f.key}" value="${val || "#ffffff"}"></div></div>`;
+      } else if (f.type === "checkbox") {
+        return `<div class="section-style-field checkbox"><input type="checkbox" id="style-${f.key}" ${val ? "checked" : ""}><label for="style-${f.key}">${f.label}</label></div>`;
+      }
+      return "";
+    }).join("");
+
+    $("#sectionStyleFields").innerHTML = fields;
+
+    // Style listeners
+    $$("#sectionStyleFields input, #sectionStyleFields select").forEach(el => {
+      el.addEventListener("input", () => {
+        const s2 = sections.find(x => x.id === selectedId);
+        const key = el.id.replace("style-", "");
+        if (!s2.style) s2.style = {};
+        if (el.type === "checkbox") s2.style[key] = el.checked;
+        else if (el.type === "color") s2.style[key] = el.value;
+        else s2.style[key] = el.value;
+        pushHistory();
+        renderCanvas();
         autosave();
       });
     });
@@ -354,8 +496,28 @@
     select.innerHTML = Storefront.THEMES.map(t => `<option value="${t.slug}" ${shop.theme === t.slug ? "selected" : ""}>${t.name}</option>`).join("");
     const theme = Storefront.getTheme(shop.theme);
     $("#themePrimary").value = shop.theme_color || theme.accent;
-    $("#themeFont").value = shop.theme_font || theme.font;
+    const fontSelect = $("#themeFont");
+    fontSelect.innerHTML = [
+      "Inter, sans-serif",
+      "Georgia, serif",
+      "Playfair Display, serif",
+      "Poppins, sans-serif",
+      "Lora, serif",
+      "Archivo, sans-serif",
+      "Cormorant Garamond, serif",
+      "Space Grotesk, sans-serif",
+      "Nunito, sans-serif",
+      "Sora, sans-serif",
+      "Oswald, sans-serif",
+      "Great Vibes, cursive",
+      "Baloo 2, sans-serif",
+      "Cinzel, serif",
+      "Manrope, sans-serif",
+      "Avenir Next, sans-serif",
+      "Didot, serif",
+    ].map(f => `<option value="${f}" ${(shop.theme_font || theme.font) === f ? "selected" : ""}>${f.split(",")[0]}</option>`).join("");
     $("#themeRadius").value = shop.theme_radius || "16";
+    $("#themeButtonStyle").value = shop.theme_button_style || "rounded";
   };
 
   /* Apply theme colors onto the canvas as CSS vars */
@@ -369,6 +531,7 @@
     canvas.style.setProperty("--t-font", shop.theme_font || th.font);
     canvas.style.setProperty("--t-radius", (shop.theme_radius || "16") + "px");
     canvas.style.fontFamily = shop.theme_font || th.font;
+    canvas.style.setProperty("--btn-radius", shop.theme_button_style === "sharp" ? "0" : shop.theme_button_style === "pill" ? "999px" : "var(--t-radius)");
   };
 
   /* ---------- Init ---------- */
@@ -404,6 +567,15 @@
     applyThemeToCanvas();
     renderCanvas();
     bindLibraryDrag();
+
+    // Load SEO settings
+    const shopSettings = Utils.store.get("dc_shop") || {};
+    $("#seoTitle").value = shopSettings.seo_title || "";
+    $("#seoDescription").value = shopSettings.seo_description || "";
+    $("#customDomain").value = shopSettings.custom_domain || "";
+
+    // File upload handlers
+    bindFileUploads(shopSettings);
 
     $("undoBtn").onclick = undo;
     $("redoBtn").onclick = redo;
@@ -450,6 +622,7 @@
       shop3.theme_color = $("#themePrimary").value;
       shop3.theme_font = $("#themeFont").value;
       shop3.theme_radius = $("#themeRadius").value;
+      shop3.theme_button_style = $("#themeButtonStyle").value;
       Utils.store.set("dc_shop", shop3);
       Utils.db.update("stores", { id: shop3.id }, { theme: shop3.theme }).catch(() => {});
       toast("success", "Theme applied — preview updated");
@@ -469,6 +642,17 @@
       renderCanvas();
     };
 
+    // SEO save
+    $("#saveSeo").onclick = async () => {
+      const shop5 = Utils.store.get("dc_shop") || {};
+      shop5.seo_title = $("#seoTitle").value.trim();
+      shop5.seo_description = $("#seoDescription").value.trim();
+      shop5.custom_domain = $("#customDomain").value.trim();
+      Utils.store.set("dc_shop", shop5);
+      if (shop5.id) Utils.db.update("stores", { id: shop5.id }, { seo_title: shop5.seo_title, seo_description: shop5.seo_description, custom_domain: shop5.custom_domain }).catch(() => {});
+      toast("success", "SEO settings saved");
+    };
+
     // keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -478,6 +662,31 @@
     });
 
     save();
+  };
+
+  /* ---------- File upload handlers ---------- */
+  const bindFileUploads = (shop) => {
+    const handleUpload = async (inputId, key) => {
+      const input = $(`#${inputId}`);
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const url = await Utils.uploadFile(file, "storefront");
+          const shop2 = Utils.store.get("dc_shop") || {};
+          shop2[key] = url;
+          Utils.store.set("dc_shop", shop2);
+          if (shop2.id) Utils.db.update("stores", { id: shop2.id }, { [key]: url }).catch(() => {});
+          toast("success", `${key} uploaded`);
+        } catch (err) {
+          toast("error", "Upload failed: " + err.message);
+        }
+      };
+    };
+
+    handleUpload("storeFavicon", "favicon");
+    handleUpload("storeLogo", "logo");
+    handleUpload("storeSocialImage", "social_image");
   };
 
   init();

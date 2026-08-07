@@ -50,10 +50,38 @@ const Storefront = (() => {
   };
 
   /* ---------- Section renderers (pure HTML strings) ---------- */
+  /* ---- Section style helper ---- */
+  function getSectionStyle(s) {
+    const st = s.style || {};
+    let css = "";
+    const padMap = { none: "0", sm: "32px", md: "64px", lg: "96px", xl: "128px" };
+    if (st.paddingTop) css += `padding-top:${padMap[st.paddingTop] || st.paddingTop};`;
+    if (st.paddingBottom) css += `padding-bottom:${padMap[st.paddingBottom] || st.paddingBottom};`;
+    if (st.background) {
+      const bgMap = {
+        transparent: "transparent",
+        white: "#fff",
+        soft: "var(--t-soft)",
+        accent: "var(--t-accent)",
+        dark: "#0F172A"
+      };
+      css += `background:${bgMap[st.background] || st.background};`;
+    }
+    if (st.bgColor && st.background === "custom") css += `background:${st.bgColor};`;
+    if (st.textColor) {
+      const tcMap = { default: "var(--ink,#0F172A)", light: "#fff", muted: "var(--muted,#64748B)" };
+      css += `color:${tcMap[st.textColor] || st.textColor};`;
+    }
+    if (st.fullWidth) css += `max-width:none;padding-left:0;padding-right:0;`;
+    if (st.divider) css += `border-bottom:1px solid var(--line,#E7EBF3);`;
+    return css;
+  }
+
   const SECTION_RENDERERS = {
     hero (s) {
+      const style = getSectionStyle(s);
       return `
-      <section class="sf-hero" style="--accent:var(--t-accent);--soft:var(--t-soft)">
+      <section class="sf-hero" style="${style}--accent:var(--t-accent);--soft:var(--t-soft)">
         <div class="sf-hero-inner">
           <span class="sf-eyebrow">${esc(s.eyebrow || "New collection")}</span>
           <h1>${esc(s.title || "Welcome to the collection")}</h1>
@@ -68,9 +96,10 @@ const Storefront = (() => {
     },
 
     products(s) {
+      const style = getSectionStyle(s);
       const items = s.products?.slice(0, s.count || 8) || [];
       return `
-        <section class="sf-products">
+        <section class="sf-products" style="${style}">
           <div class="sf-head">
             <span class="sf-eyebrow">Shop</span>
             <h2>${esc(s.title || "Featured Products")}</h2>
@@ -91,9 +120,10 @@ const Storefront = (() => {
     },
 
     categories(s) {
+      const style = getSectionStyle(s);
       const cats = s.categories || ["Fashion", "Electronics", "Home", "Beauty", "Sports", "Books"];
       return `
-        <section class="sf-cats" style="--t-soft:var(--t-soft)">
+        <section class="sf-cats" style="${style}--t-soft:var(--t-soft)">
           <div class="sf-head"><span class="sf-eyebrow">Browse</span><h2>${esc(s.title || "Shop by Category")}</h2></div>
           <div class="sf-cat-grid">
             ${cats.map((c, i) => `
@@ -105,13 +135,14 @@ const Storefront = (() => {
     },
 
     testimonials(s) {
+      const style = getSectionStyle(s);
       const ts = s.items || [
         ["Absolutely love this store, quality is top notch.", "Ayesha", "Karachi"],
         ["Fast delivery and beautiful packaging!", "Bilal", "Lahore"],
         ["My favorite place to shop online now.", "Fatima", "Islamabad"],
       ];
       return `
-        <section class="sf-testi">
+        <section class="sf-testi" style="${style}">
           <div class="sf-head"><span class="sf-eyebrow">Reviews</span><h2>${esc(s.title || "What customers say")}</h2></div>
           <div class="sf-testi-grid">
             ${ts.map(t => `
@@ -125,9 +156,10 @@ const Storefront = (() => {
     },
 
     gallery(s) {
+      const style = getSectionStyle(s);
       const imgs = s.images || Array.from({ length: 6 }, (_, i) => `https://picsum.photos/seed/c${s.id}${i}/500/500`);
       return `
-        <section class="sf-gallery">
+        <section class="sf-gallery" style="${style}">
           <div class="sf-head"><span class="sf-eyebrow">Lookbook</span><h2>${esc(s.title || "Gallery")}</h2></div>
           <div class="sf-gallery-grid">
             ${imgs.map(img => `<img src="${img}" alt="" loading="lazy">`).join("")}
@@ -136,8 +168,9 @@ const Storefront = (() => {
     },
 
     video(s) {
+      const style = getSectionStyle(s);
       return `
-        <section class="sf-video">
+        <section class="sf-video" style="${style}">
           <div class="sf-video-box">
             ${s.videoUrl
               ? `<video controls muted playsinline src="${s.videoUrl}"></video>`
@@ -147,13 +180,14 @@ const Storefront = (() => {
     },
 
     faq(s) {
+      const style = getSectionStyle(s);
       const items = s.items || [
         ["What is your return policy?", "We offer free returns within 14 days of delivery."],
         ["How long does shipping take?", "Standard shipping takes 3–5 working days."],
         ["Do you ship internationally?", "Yes, we ship to 60+ countries worldwide."],
       ];
       return `
-        <section class="sf-faq">
+        <section class="sf-faq" style="${style}">
           <div class="sf-head"><span class="sf-eyebrow">Help</span><h2>${esc(s.title || "Frequently asked questions")}</h2></div>
           <div class="sf-faq-list">
             ${items.map(([q, a]) => `
@@ -164,8 +198,9 @@ const Storefront = (() => {
     },
 
     newsletter(s) {
+      const style = getSectionStyle(s);
       return `
-        <section class="sf-newsletter" style="background:var(--t-accent)">
+        <section class="sf-newsletter" style="${style}background:var(--t-accent)">
           <div class="sf-newsletter-inner">
             <h2>${esc(s.title || "Join our list")}</h2>
             <p>${esc(s.subtitle || "Get 10% off your first order plus early access to drops.")}</p>
@@ -178,14 +213,35 @@ const Storefront = (() => {
     },
 
     contact(s) {
+      const style = getSectionStyle(s);
       return `
-        <section class="sf-contact">
+        <section class="sf-contact" style="${style}">
           <div class="sf-head"><span class="sf-eyebrow">Contact</span><h2>${esc(s.title || "Get in touch")}</h2></div>
           <form class="sf-form sf-contact-form">
             <input placeholder="Your name"><input type="email" placeholder="Email">
             <textarea placeholder="Message" rows="4"></textarea>
             <button class="sf-btn">Send message</button>
           </form>
+        </section>`;
+    },
+
+    footer(s) {
+      const style = getSectionStyle(s);
+      return `
+        <section class="sf-footer-section" style="${style}">
+          <div class="sf-footer-grid">
+            <div>
+              <h4>${esc(s.title || "Store")}</h4>
+              <p style="color:var(--muted);font-size:.9rem">${esc(s.description || "Beautiful products, delivered fast. Built with DualCore.")}</p>
+            </div>
+            <div><h4>Shop</h4><a href="#">New Arrivals</a><a href="#">Best Sellers</a><a href="#">Sale</a></div>
+            <div><h4>Company</h4><a href="#">About</a><a href="#">Contact</a><a href="#">Blog</a></div>
+            <div><h4>Help</h4><a href="#">Shipping</a><a href="#">Returns</a><a href="#">Privacy</a></div>
+          </div>
+          <div class="sf-footer-bottom">
+            <span>© 2026 ${esc(s.title || "Store")} — Powered by DualCore</span>
+            <span>Payment: cards · wallets · COD</span>
+          </div>
         </section>`;
     },
 
@@ -221,14 +277,26 @@ const Storefront = (() => {
     const strip = Array.isArray(sections) ? sections : (sections.sections || []);
     const vis = strip.filter(s => s.visible !== false);
     const siteName = shop.name || "My Store";
+    const seoTitle = shop.seo_title || `${siteName} | ${shop.tagline || "Shop the collection"}`;
+    const seoDescription = shop.seo_description || shop.tagline || "Beautiful products, fast delivery.";
+    const ogImage = shop.social_image || "";
 
     return `<!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>${Utils.esc(siteName)}</title>
-        <meta name="description" content="${Utils.esc(shop.tagline || "Beautiful products, fast delivery.")}">
+        <title>${Utils.esc(seoTitle)}</title>
+        <meta name="description" content="${Utils.esc(seoDescription)}">
+        <meta property="og:title" content="${Utils.esc(seoTitle)}">
+        <meta property="og:description" content="${Utils.esc(seoDescription)}">
+        <meta property="og:type" content="website">
+        ${ogImage ? `<meta property="og:image" content="${Utils.esc(ogImage)}">` : ""}
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="${Utils.esc(seoTitle)}">
+        <meta name="twitter:description" content="${Utils.esc(seoDescription)}">
+        ${ogImage ? `<meta name="twitter:image" content="${Utils.esc(ogImage)}">` : ""}
+        ${shop.favicon ? `<link rel="icon" href="${Utils.esc(shop.favicon)}">` : ""}
         <style>
           ${CSS_RESET}
           ${STOREFRONT_CSS}
@@ -325,7 +393,7 @@ const Storefront = (() => {
     .sf-hero h1{font-size:clamp(2.2rem,6vw,4rem);line-height:1.05;margin:16px 0 18px;letter-spacing:-.03em}
     .sf-hero p{color:var(--muted);font-size:1.1rem;max-width:520px;margin:0 auto}
     .sf-hero-actions{display:flex;gap:12px;justify-content:center;margin-top:30px;flex-wrap:wrap}
-    .sf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 28px;border-radius:99px;background:var(--t-accent);color:#fff;border:none;font-weight:700;font-size:.95rem;cursor:pointer;transition:.25s;border:1px solid transparent}
+    .sf-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 28px;border-radius:var(--btn-radius,99px);background:var(--t-accent);color:#fff;border:none;font-weight:700;font-size:.95rem;cursor:pointer;transition:.25s;border:1px solid transparent}
     .sf-btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(0,0,0,.16)}
     .sf-btn-ghost{background:transparent;color:var(--on,#0F172A);border-color:var(--t-accent)}
     .sf-btn-ghost:hover{background:var(--t-accent);color:#fff}
@@ -404,6 +472,15 @@ const Storefront = (() => {
     .sf-footer a{display:block;color:var(--muted);margin-bottom:9px;font-size:.9rem}
     .sf-footer-bottom{border-top:1px solid rgba(0,0,0,.08);padding-top:20px;display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem;flex-wrap:wrap;gap:10px}
     .sf-section-ph{text-align:center;padding:60px;color:var(--muted);border:1px dashed var(--line)}
+
+    /* Footer section (builder) */
+    .sf-footer-section{background:var(--t-soft);color:var(--ink,#0F172A)}
+    .sf-footer-section .sf-footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px;margin-bottom:34px}
+    .sf-footer-section h4{margin-bottom:14px;font-size:.95rem}
+    .sf-footer-section a{display:block;color:var(--muted);margin-bottom:9px;font-size:.9rem}
+    .sf-footer-section .sf-footer-bottom{border-top:1px solid rgba(0,0,0,.08);padding-top:20px;display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem;flex-wrap:wrap;gap:10px}
+    @media(max-width:768px){.sf-footer-section .sf-footer-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:480px){.sf-footer-section .sf-footer-grid{grid-template-columns:1fr}}
 
     /* section tools (only in builder) */
     .sf-section-tools{display:none;position:absolute;top:10px;right:10px;z-index:20;gap:6px;background:rgba(15,23,42,.85);backdrop-filter:blur(10px);border-radius:10px;padding:6px;box-shadow:0 8px 20px rgba(0,0,0,.25)}
