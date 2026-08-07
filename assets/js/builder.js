@@ -384,6 +384,16 @@
     renderSidebar("builder");
     renderTopbar("Store Builder", "Design your storefront");
 
+    // mobile sidebar toggle
+    const topbarActions = Utils.$("#topbarActions");
+    if (topbarActions) {
+      topbarActions.innerHTML = `
+        <button class="btn-icon canvas-toggle" id="canvasToggle" aria-label="Open sidebar" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:22px;height:22px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>`;
+      Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
+    }
+
     loadState();
     renderLibrary();
     renderThemeControls();
