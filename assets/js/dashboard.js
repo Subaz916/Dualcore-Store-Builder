@@ -195,4 +195,44 @@
       format: (v) => "PKR " + Utils.fmtShort(v),
     });
   }, 250));
+
+  /* ---------- Dashboard Storefront Preview ---------- */
+  (async () => {
+    const target = $("#dashStorePreview");
+    if (!target) return;
+
+    // Load sections from Supabase (cloud) or localStorage (demo)
+    const loadSections = async () => {
+      if (window.supa && shop.id) {
+        try {
+          const { data, error } = await window.supa
+            .from("pages")
+            .select("content")
+            .eq("id", "builder")
+            .eq("store_id", shop.id)
+            .single();
+          if (!error && data?.content) return data.content;
+        } catch (err) {
+          console.warn("Failed to load from pages table:", err);
+        }
+      }
+      return Utils.store.get("dc_builder_sections") || DemoData.defaultSections(shop.theme);
+    };
+
+    const products = await DemoData.getProducts(user.id);
+    const sections = await loadSections();
+    const sects = sections.map(s => {
+      if (s.type === "products") return { ...s, products: products.filter(p => p.status === "active").slice(0, s.count || 8) };
+      return s;
+    });
+    const html = Storefront.renderPage(sects, shop);
+    target.innerHTML = html;
+
+    // allow storefront scripts (cart) to run
+    target.querySelectorAll("script").forEach(old => {
+      const s = document.createElement("script");
+      s.textContent = old.textContent;
+      old.replaceWith(s);
+    });
+  })();
 })();

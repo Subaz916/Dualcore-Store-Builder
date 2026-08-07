@@ -72,6 +72,27 @@
         </div>
       </div>
 
+      <!-- STOREFRONT PREVIEW -->
+      <div class="card" style="margin-top:20px">
+        <div class="flex-between" style="margin-bottom:12px;padding:0 16px">
+          <div>
+            <h3 style="font-size:1.05rem">Storefront preview</h3>
+            <p class="muted" style="font-size:.82rem">Live preview of your built store</p>
+          </div>
+          <div class="flex gap-2">
+            <a href="builder.html" class="btn btn-ghost btn-sm">✎ Edit design</a>
+            <a href="store.html" class="btn btn-primary btn-sm">Full preview ↗</a>
+          </div>
+        </div>
+        <div class="chart-box" style="height:380px;background:#f8fafc;overflow:auto">
+          <div id="dashStorePreview" style="width:100%;min-height:100%">
+            <div class="flex-center" style="height:100%;color:var(--muted)">
+              <div class="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- BOTTOM ROW -->
       <div class="dash-grid" style="margin-top:20px">
         <div class="card">
@@ -128,6 +149,7 @@
   <script src="assets/js/app.js"></script>
   <script src="assets/js/auth.js"></script>
   <script src="assets/js/seed.js"></script>
+  <script src="assets/js/storefront.js"></script>
   <script src="assets/js/charts.js"></script>
   <script src="assets/js/dashboard.js"></script>
 </body>
