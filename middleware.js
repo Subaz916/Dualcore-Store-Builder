@@ -85,7 +85,7 @@ function slugMapGet(slug) {
 let listingPromise = null;
 async function rootFolders() {
   if (!listingPromise) {
-    listingPromise = supabaseRequest('POST', '/object/list/', { bucket: BUCKET, prefix: '', limit: 1000 })
+    listingPromise = supabaseRequest('POST', `/object/list/${BUCKET}`, { prefix: '', limit: 1000 })
       .catch(() => null)
       .finally(() => { listingPromise = null; });
   }
@@ -97,17 +97,20 @@ async function findOwnerForSlug(slug) {
   const hit = slugMapGet(slug);
   if (hit) return hit.userId;
   const listRes = await rootFolders();
-  if (!listRes?.folders) return null;
+  if (!Array.isArray(listRes)) return null;
+
+  // The Storage list endpoint returns an ARRAY of items; folders have id === null.
+  const users = listRes.filter(x => x && x.id === null).map(x => x.name);
 
   // List each user folder once (in parallel) and rebuild the slug→owner map.
-  const jobs = listRes.folders.map(async (folder) => {
+  const jobs = users.map(async (userId) => {
     try {
-      const userListRes = await supabaseRequest('POST', '/object/list/', {
-        bucket: BUCKET,
-        prefix: folder.name + '/',
+      const userListRes = await supabaseRequest('POST', `/object/list/${BUCKET}`, {
+        prefix: userId.replace(/\/+$/, '') + '/',
         limit: 100,
       });
-      return { folder: folder.name, slugs: (userListRes?.folders || []).map(f => f.name) };
+      if (!Array.isArray(userListRes)) return null;
+      return { userId, slugs: userListRes.filter(x => x && x.id === null).map(f => f.name) };
     } catch { return null; }
   });
 
@@ -116,7 +119,7 @@ async function findOwnerForSlug(slug) {
   for (const entry of all) {
     if (!entry) continue;
     for (const name of entry.slugs) {
-      slugMapCache.set(name, { ts: now, userId: entry.folder });
+      slugMapCache.set(name, { ts: now, userId: entry.userId });
     }
   }
   const found = slugMapGet(slug);
