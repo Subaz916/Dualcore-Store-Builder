@@ -308,7 +308,7 @@ const Utils = (() => {
     if (readyBound) return readyBound;
     readyBound = Promise.race([
       r,
-      new Promise(res => setTimeout(res, 700)),
+      new Promise(res => setTimeout(res, 450)),
     ]);
     return readyBound;
   };

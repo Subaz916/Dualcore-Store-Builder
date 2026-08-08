@@ -89,6 +89,18 @@ body.app-page { background: var(--surface); }
 .chart-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; font-size: .82rem; color: var(--muted); }
 .chart-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px; }
 
+/* ---------- Mini store preview (compact summary, no full-website HTML) ---------- */
+.dash-mini-store { padding: 18px 20px; max-width: 780px; }
+.dms-head { display: flex; align-items: center; gap: 12px; }
+.dms-avatar { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), var(--violet)); color: #fff; font-weight: 700; font-size: .95rem; display: grid; place-items: center; flex-shrink: 0; }
+.dms-id { flex: 1; min-width: 0; }
+.dms-name { font-weight: 700; font-size: .98rem; }
+.dms-domain { font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dms-tagline { color: var(--muted); font-size: .85rem; margin: 10px 0 4px; line-height: 1.5; }
+.dms-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.dms-meta { font-size: .78rem; color: var(--muted); margin-top: 10px; }
+.dms-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border); }
+
 /* ---------- Activity feed ---------- */
 .activity-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px dashed var(--border); }
 .activity-item:last-child { border-bottom: none; }

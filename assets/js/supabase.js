@@ -56,7 +56,7 @@
       window.supa = null;
       dispatchReady();
     }
-  }, 650);
+  }, 400);
 
   // 3) Load SDK from CDN. On success or failure, fire dualcore:supabase-ready.
   (function syncLoad(i) {

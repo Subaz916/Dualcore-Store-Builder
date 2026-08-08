@@ -5,6 +5,19 @@
 const Auth = (() => {
   const { db, store, isSignedIn, supabaseReady } = Utils;
 
+  /* Bounded network call — returns null instead of hanging when the
+     Supabase endpoint is slow or unreachable (biggest load-time killer). */
+  const boundedSession = async (ms = 1200) => {
+    if (!window.supa) return null;
+    try {
+      const { data } = await Promise.race([
+        window.supa.auth.getSession(),
+        new Promise(res => setTimeout(() => res({ timeout: true }), ms)),
+      ]);
+      return data?.timeout ? null : data?.session || null;
+    } catch { return null; }
+  };
+
   const toUser = (u) => u ? {
     id: u.id,
     email: u.email,
@@ -33,10 +46,8 @@ const Auth = (() => {
   const restoreSession = async () => {
     await supabaseReady();
     if (!window.supa) return;
-    try {
-      const { data } = await window.supa.auth.getSession();
-      if (data?.session?.user) mirrorUser(data.session.user);
-    } catch { /* fall through — mirror/local user saved earlier */ }
+    const session = await boundedSession();
+    if (session?.user) mirrorUser(session.user);
     // Fire onAuthStateChange AFTER initial load so events keep mirror fresh
     persist();
   };
@@ -49,10 +60,13 @@ const Auth = (() => {
     if (window.supa) {
       // 2) ask Supabase (network) only when no mirror exists
       try {
-        const { data } = await window.supa.auth.getSession();
-        if (data?.session?.user) { mirrorUser(data.session.user); return toUser(data.session.user); }
-        const { data: ud, error } = await window.supa.auth.getUser();
-        if (!error && ud?.user) { mirrorUser(ud.user); return toUser(ud.user); }
+        const session = await boundedSession();
+        if (session?.user) { mirrorUser(session.user); return toUser(session.user); }
+        const { data: ud, error } = await Promise.race([
+          window.supa.auth.getUser(),
+          new Promise(res => setTimeout(() => res({ error: true, timedOut: true }), 1200)),
+        ]);
+        if (!error && !ud?.timedOut && ud?.user) { mirrorUser(ud.user); return toUser(ud.user); }
       } catch { /* demo fallback below */ }
       return Utils.getLocalUser();
     }
@@ -64,7 +78,7 @@ const Auth = (() => {
     if (mirror?.id) return { user: mirror, access_token: mirror.access_token || "local" };
     await supabaseReady();
     if (window.supa) {
-      try { const { data } = await window.supa.auth.getSession(); return data.session; }
+      try { return await boundedSession(); }
       catch { return null; }
     }
     return Utils.getLocalUser() ? { user: Utils.getLocalUser(), access_token: "local" } : null;

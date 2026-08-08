@@ -205,7 +205,7 @@
     const loadSections = async () => {
       const getLocal = () => {
         const local = Utils.store.get("dc_builder_sections");
-        return (local && Array.isArray(local) && local.length > 0) ? local : DemoData.defaultSections(shop.theme);
+        return (local && Array.isArray(local) && local.length > 0) ? local : DemoData.defaultSections();
       };
       if (window.supa && shop.id) {
         try {
@@ -225,21 +225,53 @@
       return getLocal();
     };
 
-    const products = await DemoData.getProducts(user.id);
-    const sections = await loadSections();
-    const sects = sections.map(s => {
-      if (s.type === "products") return { ...s, products: products.filter(p => p.status === "active").slice(0, s.count || 8) };
-      return s;
-    });
-    const html = Storefront.renderPage(sects, shop);
-    target.innerHTML = html;
+    // Compact summary card — no full-website HTML, no page scroll.
+    const renderMini = (sections, products) => {
+      const list = Array.isArray(sections) ? sections : [];
+      const vis = list.filter(s => s.visible !== false);
+      const labels = {
+        hero: "Hero", products: "Products", categories: "Categories", testimonials: "Testimonials",
+        gallery: "Gallery", video: "Video", faq: "FAQ", newsletter: "Newsletter",
+        contact: "Contact", footer: "Footer"
+      };
+      const chips = vis.slice(0, 10).map(s =>
+        `<span class="badge badge-ghost" style="font-size:.68rem">${labels[s.type] || s.title || s.type}</span>`
+      ).join("");
+      const more = vis.length > 10 ? `<span class="badge badge-ghost" style="font-size:.68rem">+${vis.length - 10}</span>` : "";
+      const prodCount = (products || []).filter(p => p.status === "active").length;
+      const name = shop.name || "My Store";
+      const domain = (Utils.toSlug(name) || "mystore") + ".dualcore.shop";
+      target.innerHTML = `
+        <div class="dash-mini-store">
+          <div class="dms-head">
+            <div class="dms-avatar">${Utils.initials(name)}</div>
+            <div class="dms-id">
+              <div class="dms-name">${Utils.esc(name)}</div>
+              <div class="dms-domain">${Utils.esc(domain)}</div>
+            </div>
+            <span class="badge ${shop.published_at ? "badge-success" : ""}" style="${shop.published_at ? "" : "background:var(--surface);color:var(--muted);border:1px solid var(--border)"}">${shop.published_at ? "Published" : "Draft"}</span>
+          </div>
+          ${shop.tagline ? `<p class="dms-tagline">${Utils.esc(shop.tagline)}</p>` : ""}
+          ${chips ? `<div class="dms-chips">${chips}${more}</div>` : '<p class="muted" style="font-size:.82rem;margin:6px 0">No sections yet — start building below.</p>'}
+          <div class="dms-meta">${vis.length} section${vis.length === 1 ? "" : "s"} · ${prodCount} active product${prodCount === 1 ? "" : "s"}</div>
+          <div class="dms-actions">
+            <a href="store.html" class="btn btn-primary btn-sm">Full preview ↗</a>
+            <a href="builder.html" class="btn btn-ghost btn-sm">✎ Edit design</a>
+            <a href="publish.html" class="btn btn-ghost btn-sm">🚀 Publish</a>
+          </div>
+        </div>`;
+    };
 
-    // allow storefront scripts (cart) to run
-    target.querySelectorAll("script").forEach(old => {
-      const s = document.createElement("script");
-      s.textContent = old.textContent;
-      old.replaceWith(s);
-    });
+    try {
+      const [prods, sections] = await Promise.all([
+        DemoData.getProducts(user.id),
+        loadSections(),
+      ]);
+      renderMini(sections, prods);
+    } catch (err) {
+      console.warn("Dashboard preview unavailable:", err);
+      target.innerHTML = '<p class="muted" style="padding:24px">Preview unavailable.</p>';
+    }
   })();
 
   /* ---------- Announcements / Broadcast Notifications ---------- */

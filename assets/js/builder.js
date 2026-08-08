@@ -602,186 +602,212 @@
   /* ---------- Init ---------- */
   const init = async () => {
     try {
-      await requireAuth();
-      const user = await Auth.getUser();
-      if (!user) return;
-      const shopList = await Utils.db.select("stores", { limit: 1 });
-      const shop = shopList[0] || {};
-      Utils.store.set("dc_shop", shop);
-      try {
-        products = await DemoData.getProducts(user.id);
-      } catch {
-        products = [];
-      }
+      /* ---------- Phase 1 — instant local paint (zero network) ----------
+         The builder UI + canvas render straight from the localStorage mirror
+         so the page is interactive the moment scripts finish loading. */
+      const bootUI = () => {
+        renderSidebar("builder");
+        renderTopbar("Store Builder", "Design your storefront");
 
-      renderSidebar("builder");
-      renderTopbar("Store Builder", "Design your storefront");
-
-      const topbarActions = Utils.$("#topbarActions");
-      if (topbarActions) {
-        topbarActions.innerHTML = `
-          <button class="btn-icon canvas-toggle" id="canvasToggle" aria-label="Open sidebar" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:22px;height:22px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-          </button>`;
-        Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
-      }
-
-      loadState();
-
-      const selectedTemplateId = Utils.store.get("dc_selected_template");
-      if (selectedTemplateId) {
-        const template = DemoData.getTemplate(selectedTemplateId);
-        if (template) {
-          sections = template.sections.map((s) => ({
-            id: Utils.uid(),
-            type: s.type,
-            title: s.title,
-            visible: s.visible !== false,
-            ...s
-          }));
-          Utils.store.set("dc_builder_sections", sections);
-          toast("success", `${template.name} layout loaded — now pick your colors`);
-          Utils.store.remove("dc_selected_template");
+        const topbarActions = Utils.$("#topbarActions");
+        if (topbarActions) {
+          topbarActions.innerHTML = `
+            <button class="btn-icon canvas-toggle" id="canvasToggle" aria-label="Open sidebar" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:22px;height:22px"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>`;
+          Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
         }
-      }
 
-      renderLibrary();
-      renderThemeControls();
-      applyThemeToCanvas();
-      renderCanvas();
-      bindLibraryDrag();
+        loadState();
 
-      const shopSettings = Utils.store.get("dc_shop") || {};
-      $("#seoTitle").value = shopSettings.seo_title || "";
-      $("#seoDescription").value = shopSettings.seo_description || "";
-      $("#customDomain").value = shopSettings.custom_domain || "";
-
-      bindFileUploads(shopSettings);
-
-      $("#undoBtn").onclick = undo;
-      $("#redoBtn").onclick = redo;
-      $("#deviceSelect").onchange = (e) => setDevice(e.target.value);
-      $("#previewBtn").onclick = () => {
-        const shop2 = { ...(Utils.store.get("dc_shop") || {}), name: $("#storeNameInput").value || "My Store", tagline: $("#storeTaglineInput").value };
-        Utils.store.set("dc_shop", shop2);
-        const html = Storefront.renderPage(sections, shop2);
-        const w = window.open("", "_blank", "width=1200,height=800");
-        if (w) { w.document.open(); w.document.write(html); w.document.close(); }
-        else toast("warn", "Pop-up blocked — allow pop-ups for preview");
-      };
-      $("#publishBtn").onclick = () => location.href = "publish.html";
-      $("#closeEditor").onclick = closeEditor;
-
-      $("#themeRadius").addEventListener("input", (e) => {
-        $("#themeRadiusVal").textContent = e.target.value;
-        const shop = Utils.store.get("dc_shop") || {};
-        shop.theme_radius = e.target.value;
-        Utils.store.set("dc_shop", shop);
-        applyThemeToCanvas();
-        autosaveTheme();
-      });
-
-      // Live color editing — updates the store preview instantly
-      const syncColorFrom = (val) => {
-        const color = String(val || "#5C6EFF").trim();
-        if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) return;
-        const shop = Utils.store.get("dc_shop") || {};
-        shop.theme_color = color;
-        Utils.store.set("dc_shop", shop);
-        $("#themePrimary").value = color;
-        $("#themePrimaryHex").value = color.toUpperCase();
-        $("#themePrimaryLabel").textContent = color;
-        applyThemeToCanvas();
-        autosaveTheme();
-      };
-      const autosaveTheme = Utils.debounce(() => { persistTheme(); }, 600);
-      $("#themePrimary").addEventListener("input", (e) => { $("#themePrimaryHex").value = e.target.value.toUpperCase(); $("#themePrimaryLabel").textContent = e.target.value; syncColorFrom(e.target.value); });
-      $("#themePrimaryHex").addEventListener("input", (e) => syncColorFrom(e.target.value));
-      $("#themeFont").addEventListener("change", (e) => {
-        const shop = Utils.store.get("dc_shop") || {};
-        shop.theme_font = e.target.value;
-        Utils.store.set("dc_shop", shop);
-        applyThemeToCanvas();
-        autosaveTheme();
-      });
-      $("#themeButtonStyle").addEventListener("change", (e) => {
-        const shop = Utils.store.get("dc_shop") || {};
-        shop.theme_button_style = e.target.value;
-        Utils.store.set("dc_shop", shop);
-        applyThemeToCanvas();
-        autosaveTheme();
-      });
-
-      // tab switching
-      $$("#builderTabs .tab").forEach(tab => {
-        tab.onclick = () => {
-          $$("#builderTabs .tab").forEach(t => t.classList.remove("active"));
-          tab.classList.add("active");
-          $$(".builder-panel").forEach(p => p.classList.remove("active"));
-          const panelId = "panel" + tab.dataset.panel.charAt(0).toUpperCase() + tab.dataset.panel.slice(1);
-          const panel = $("#" + panelId);
-          if (panel) panel.classList.add("active");
-        };
-      });
-
-      $("#sectionSearch").addEventListener("input", (e) => {
-        const q = e.target.value.toLowerCase();
-        $$(".lib-item").forEach(it => {
-          it.style.display = it.textContent.toLowerCase().includes(q) ? "" : "none";
-        });
-        $$(".lib-group-title").forEach(title => {
-          let sibling = title.nextElementSibling;
-          let anyVisible = false;
-          while (sibling && sibling.classList.contains("lib-item")) {
-            if (sibling.style.display !== "none") anyVisible = true;
-            sibling = sibling.nextElementSibling;
+        const selectedTemplateId = Utils.store.get("dc_selected_template");
+        if (selectedTemplateId) {
+          const template = DemoData.getTemplate(selectedTemplateId);
+          if (template) {
+            sections = template.sections.map((s) => ({
+              id: Utils.uid(),
+              type: s.type,
+              title: s.title,
+              visible: s.visible !== false,
+              ...s
+            }));
+            Utils.store.set("dc_builder_sections", sections);
+            toast("success", `${template.name} layout loaded — now pick your colors`);
+            Utils.store.remove("dc_selected_template");
           }
-          title.style.display = anyVisible ? "" : "none";
+        }
+
+        renderLibrary();
+        renderThemeControls();
+        applyThemeToCanvas();
+        renderCanvas();
+        bindLibraryDrag();
+
+        const shopSettings = Utils.store.get("dc_shop") || {};
+        $("#seoTitle").value = shopSettings.seo_title || "";
+        $("#seoDescription").value = shopSettings.seo_description || "";
+        $("#customDomain").value = shopSettings.custom_domain || "";
+
+        bindFileUploads(shopSettings);
+
+        $("#undoBtn").onclick = undo;
+        $("#redoBtn").onclick = redo;
+        $("#deviceSelect").onchange = (e) => setDevice(e.target.value);
+        $("#previewBtn").onclick = () => {
+          const shop2 = { ...(Utils.store.get("dc_shop") || {}), name: $("#storeNameInput").value || "My Store", tagline: $("#storeTaglineInput").value };
+          Utils.store.set("dc_shop", shop2);
+          const html = Storefront.renderPage(sections, shop2);
+          const w = window.open("", "_blank", "width=1200,height=800");
+          if (w) { w.document.open(); w.document.write(html); w.document.close(); }
+          else toast("warn", "Pop-up blocked — allow pop-ups for preview");
+        };
+        $("#publishBtn").onclick = () => location.href = "publish.html";
+        $("#closeEditor").onclick = closeEditor;
+
+        $("#themeRadius").addEventListener("input", (e) => {
+          $("#themeRadiusVal").textContent = e.target.value;
+          const shop = Utils.store.get("dc_shop") || {};
+          shop.theme_radius = e.target.value;
+          Utils.store.set("dc_shop", shop);
+          applyThemeToCanvas();
+          autosaveTheme();
         });
-      });
 
-      $("#applyTheme").onclick = () => {
-        const shop3 = Utils.store.get("dc_shop") || {};
-        syncColorFrom($("#themePrimaryHex").value || $("#themePrimary").value);
-        shop3.theme_font = $("#themeFont").value;
-        shop3.theme_radius = $("#themeRadius").value;
-        shop3.theme_button_style = $("#themeButtonStyle").value;
-        Utils.store.set("dc_shop", shop3);
-        applyThemeToCanvas();
-        renderCanvas();
-        persistTheme();
-        toast("success", "Colors saved to your store");
+        // Live color editing — updates the store preview instantly
+        const syncColorFrom = (val) => {
+          const color = String(val || "#5C6EFF").trim();
+          if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) return;
+          const shop = Utils.store.get("dc_shop") || {};
+          shop.theme_color = color;
+          Utils.store.set("dc_shop", shop);
+          $("#themePrimary").value = color;
+          $("#themePrimaryHex").value = color.toUpperCase();
+          $("#themePrimaryLabel").textContent = color;
+          applyThemeToCanvas();
+          autosaveTheme();
+        };
+        const autosaveTheme = Utils.debounce(() => { persistTheme(); }, 600);
+        $("#themePrimary").addEventListener("input", (e) => { $("#themePrimaryHex").value = e.target.value.toUpperCase(); $("#themePrimaryLabel").textContent = e.target.value; syncColorFrom(e.target.value); });
+        $("#themePrimaryHex").addEventListener("input", (e) => syncColorFrom(e.target.value));
+        $("#themeFont").addEventListener("change", (e) => {
+          const shop = Utils.store.get("dc_shop") || {};
+          shop.theme_font = e.target.value;
+          Utils.store.set("dc_shop", shop);
+          applyThemeToCanvas();
+          autosaveTheme();
+        });
+        $("#themeButtonStyle").addEventListener("change", (e) => {
+          const shop = Utils.store.get("dc_shop") || {};
+          shop.theme_button_style = e.target.value;
+          Utils.store.set("dc_shop", shop);
+          applyThemeToCanvas();
+          autosaveTheme();
+        });
+
+        // tab switching
+        $$("#builderTabs .tab").forEach(tab => {
+          tab.onclick = () => {
+            $$("#builderTabs .tab").forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            $$(".builder-panel").forEach(p => p.classList.remove("active"));
+            const panelId = "panel" + tab.dataset.panel.charAt(0).toUpperCase() + tab.dataset.panel.slice(1);
+            const panel = $("#" + panelId);
+            if (panel) panel.classList.add("active");
+          };
+        });
+
+        $("#sectionSearch").addEventListener("input", (e) => {
+          const q = e.target.value.toLowerCase();
+          $$(".lib-item").forEach(it => {
+            it.style.display = it.textContent.toLowerCase().includes(q) ? "" : "none";
+          });
+          $$(".lib-group-title").forEach(title => {
+            let sibling = title.nextElementSibling;
+            let anyVisible = false;
+            while (sibling && sibling.classList.contains("lib-item")) {
+              if (sibling.style.display !== "none") anyVisible = true;
+              sibling = sibling.nextElementSibling;
+            }
+            title.style.display = anyVisible ? "" : "none";
+          });
+        });
+
+        $("#applyTheme").onclick = () => {
+          const shop3 = Utils.store.get("dc_shop") || {};
+          syncColorFrom($("#themePrimaryHex").value || $("#themePrimary").value);
+          shop3.theme_font = $("#themeFont").value;
+          shop3.theme_radius = $("#themeRadius").value;
+          shop3.theme_button_style = $("#themeButtonStyle").value;
+          Utils.store.set("dc_shop", shop3);
+          applyThemeToCanvas();
+          renderCanvas();
+          persistTheme();
+          toast("success", "Colors saved to your store");
+        };
+
+        $("#saveSettings").onclick = async () => {
+          const shop4 = Utils.store.get("dc_shop") || {};
+          shop4.name = $("#storeNameInput").value.trim() || "My Store";
+          shop4.tagline = $("#storeTaglineInput").value.trim();
+          Utils.store.set("dc_shop", shop4);
+          if (shop4.id) Utils.db.update("stores", { id: shop4.id }, { name: shop4.name, tagline: shop4.tagline }).catch(() => {});
+          toast("success", "Store settings saved");
+          applyThemeToCanvas();
+          renderCanvas();
+        };
+
+        $("#saveSeo").onclick = async () => {
+          const shop5 = Utils.store.get("dc_shop") || {};
+          shop5.seo_title = $("#seoTitle").value.trim();
+          shop5.seo_description = $("#seoDescription").value.trim();
+          shop5.custom_domain = $("#customDomain").value.trim();
+          Utils.store.set("dc_shop", shop5);
+          if (shop5.id) Utils.db.update("stores", { id: shop5.id }, { seo_title: shop5.seo_title, seo_description: shop5.seo_description, custom_domain: shop5.custom_domain }).catch(() => {});
+          toast("success", "SEO settings saved");
+        };
+
+        document.addEventListener("keydown", (e) => {
+          const mod = e.metaKey || e.ctrlKey;
+          if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+          if (mod && e.key.toLowerCase() === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+          if (e.key === "Escape") closeEditor();
+        });
+
+        save();
       };
 
-      $("#saveSettings").onclick = async () => {
-        const shop4 = Utils.store.get("dc_shop") || {};
-        shop4.name = $("#storeNameInput").value.trim() || "My Store";
-        shop4.tagline = $("#storeTaglineInput").value.trim();
-        Utils.store.set("dc_shop", shop4);
-        if (shop4.id) Utils.db.update("stores", { id: shop4.id }, { name: shop4.name, tagline: shop4.tagline }).catch(() => {});
-        toast("success", "Store settings saved");
-        applyThemeToCanvas();
-        renderCanvas();
-      };
-
-      $("#saveSeo").onclick = async () => {
-        const shop5 = Utils.store.get("dc_shop") || {};
-        shop5.seo_title = $("#seoTitle").value.trim();
-        shop5.seo_description = $("#seoDescription").value.trim();
-        shop5.custom_domain = $("#customDomain").value.trim();
-        Utils.store.set("dc_shop", shop5);
-        if (shop5.id) Utils.db.update("stores", { id: shop5.id }, { seo_title: shop5.seo_title, seo_description: shop5.seo_description, custom_domain: shop5.custom_domain }).catch(() => {});
-        toast("success", "SEO settings saved");
-      };
-
-      document.addEventListener("keydown", (e) => {
-        const mod = e.metaKey || e.ctrlKey;
-        if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
-        if (mod && e.key.toLowerCase() === "z" && e.shiftKey) { e.preventDefault(); redo(); }
-        if (e.key === "Escape") closeEditor();
-      });
-
-      save();
+      /* ---------- Phase 2 — background hydration (bounded, never blocks) ----------
+         Auth, store row, products and any cloud-only fields refresh in the
+         background; the page is already usable from the local mirror. */
+      bootUI();
+      setTimeout(async () => {
+        try {
+          await requireAuth();
+          const user = await Auth.getUser();
+          if (!user) return;
+          const shopList = await Utils.db.select("stores", { limit: 1 });
+          const cloudShop = shopList[0] || {};
+          const localShop = Utils.store.get("dc_shop") || {};
+          Utils.store.set("dc_shop", { ...cloudShop, ...localShop });
+          try {
+            products = await DemoData.getProducts(user.id);
+          } catch {
+            products = [];
+          }
+          const shop7 = Utils.store.get("dc_shop") || {};
+          $("#deviceUrl").textContent = (Utils.toSlug(shop7.name || "mystore") || "mystore") + ".dualcore.shop";
+          $("#storeNameInput").value = shop7.name || "";
+          $("#storeTaglineInput").value = shop7.tagline || "";
+          $("#seoTitle").value = shop7.seo_title || "";
+          $("#seoDescription").value = shop7.seo_description || "";
+          $("#customDomain").value = shop7.custom_domain || "";
+          renderThemeControls();
+          applyThemeToCanvas();
+          renderCanvas();
+        } catch (err) {
+          console.warn("DualCore: cloud hydration skipped — running on local data.", err);
+        }
+      }, 300);
     } catch (err) {
       console.error("Init failed:", err);
     }
