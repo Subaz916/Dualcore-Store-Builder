@@ -17,25 +17,38 @@
    ============================================================ */
 
 (async () => {
-  try {
-    await requireAuth();
-  } catch { }
-  let user = null;
-  try { user = await Auth.getUser(); } catch { }
-  if (!user) return;
-
-  try { renderSidebar("publish"); renderTopbar("Publish", "Go live"); } catch { }
+  const Demo = window.DemoData; // may be absent on broken/cached pages — never required
 
   /* ---------- Guarded element helpers (never crash on stale HTML) ---------- */
   const el = (id) => document.getElementById(id);
   const on = (id, fn) => { const n = el(id); if (n) n.addEventListener("click", fn); };
   const setText = (id, t) => { const n = el(id); if (n) n.textContent = t; };
 
+  /* Synchronous first paint of the deploy console — appears immediately,
+     before any network/data work, so the console is never empty. */
+  {
+    const box = el("deployConsole");
+    if (box && !box.dataset.primed) {
+      box.dataset.primed = "1";
+      const line = document.createElement("div");
+      line.textContent = "▸ Initialising deploy console…";
+      box.appendChild(line);
+    }
+  }
+
+  try { await requireAuth(); } catch { }
+  let user = null;
+  try { user = await Auth.getUser(); } catch { }
+  if (!user) return;
+
+  try { renderSidebar("publish"); renderTopbar("Publish", "Go live"); } catch { }
+
   let shop = Utils.store.get("dc_shop") || {};
   let sections = Utils.store.get("dc_builder_sections");
-  if (!Array.isArray(sections)) { try { sections = DemoData.defaultSections(); } catch { sections = []; } }
+  if (!Array.isArray(sections)) { try { sections = Demo && Demo.defaultSections(); } catch { } }
+  if (!Array.isArray(sections)) sections = [];
   let products = [];
-  try { products = await DemoData.getProducts(user.id); } catch { }
+  try { products = Demo ? await Demo.getProducts(user.id) : []; } catch { }
   let sub = null;
   try { sub = await Auth.getSubscription(user.id); } catch { }
 
@@ -96,13 +109,17 @@
       : "Your live URL will appear here once published.";
   };
 
-  /* ---------- Real reachability check: the site must ANSWER with HTML ---------- */
+  /* ---------- Real reachability check: the site must ANSWER with HTML
+     AND contain the DualCore store marker — otherwise a generic SPA
+     fallback page would count as "live" by mistake. ---------- */
   const verifyUrl = async (url) => {
     try {
-      const res = await fetch(url, { redirect: "follow", cache: "no-store", headers: { Range: "bytes=0-2048" } });
+      const res = await fetch(url, { redirect: "follow", cache: "no-store" });
       if (!res.ok) return { ok: false, detail: "HTTP " + res.status };
       const type = (res.headers.get("content-type") || "").toLowerCase();
       if (!type.includes("html")) return { ok: false, detail: type ? "Not an HTML page (" + type + ")" : "No content-type header" };
+      const text = await res.text();
+      if (!text.includes("dualcore-store")) return { ok: false, detail: "answered, but not your store page (app shell?)" };
       return { ok: true };
     } catch (err) {
       return { ok: false, detail: (err && err.message) || "unreachable" };
