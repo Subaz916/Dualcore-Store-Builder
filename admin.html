@@ -10,6 +10,14 @@
   <link rel="stylesheet" href="assets/css/dashboard.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+  <style>
+    .admin-tabs { display:flex; gap:12px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; }
+    .admin-tab { padding:8px 16px; border-radius:8px; border:none; background:transparent; font-weight:600; font-size:.9rem; cursor:pointer; color:var(--muted); transition:.2s; }
+    .admin-tab.active { background:var(--primary-soft); color:var(--primary); }
+    .admin-panel { display:none; }
+    .admin-panel.active { display:block; }
+    .flag-card { display:flex; justify-content:space-between; align-items:center; padding:16px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; }
+  </style>
 </head>
 <body class="app-page no-splash">
   <div class="app-shell">
@@ -32,17 +40,99 @@
         <div class="card stat-card"><p class="muted">Published stores</p><h2 id="statPublished">–</h2></div>
       </div>
 
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px">
-        <div class="card-head" style="padding:16px 20px;border-bottom:1px solid var(--border)">
-          <b>Newest users</b>
-        </div>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>User</th><th>Email</th><th>Joined</th><th>Store</th><th>Plan</th><th>Status</th></tr></thead>
-            <tbody id="usersTable"></tbody>
-          </table>
+      <!-- Tab navigation -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-panel="users">Users</button>
+        <button class="admin-tab" data-panel="stores">Stores</button>
+        <button class="admin-tab" data-panel="features">Feature Flags &amp; Broadcast</button>
+      </div>
+
+      <!-- PANEL 1: Users -->
+      <div class="admin-panel active" id="panelUsers">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="card-head flex-between" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+            <b>Manage Users</b>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>User</th><th>Email</th><th>Joined</th><th>Plan</th><th>Billing Status</th><th>Actions</th></tr></thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
         </div>
       </div>
+
+      <!-- PANEL 2: Stores -->
+      <div class="admin-panel" id="panelStores">
+        <div class="card" style="padding:0;overflow:hidden">
+          <div class="card-head flex-between" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+            <b>Manage Stores</b>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Store Name</th><th>Subdomain</th><th>Custom Domain</th><th>Status</th><th>Published At</th><th>Actions</th></tr></thead>
+              <tbody id="storesTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Features & Announcements -->
+      <div class="admin-panel" id="panelFeatures">
+        <div class="grid grid-2" style="gap:20px">
+          
+          <!-- Feature Flags -->
+          <div class="card">
+            <h3 style="margin-bottom:16px">Feature Flags</h3>
+            
+            <div class="flag-card">
+              <div>
+                <b>Custom Domains Connection</b>
+                <p class="muted" style="font-size:.8rem;margin-top:2px">Allows paid plans to link custom domains.</p>
+              </div>
+              <input type="checkbox" id="flagDomains" checked>
+            </div>
+            
+            <div class="flag-card">
+              <div>
+                <b>Free Trial Grace Period</b>
+                <p class="muted" style="font-size:.8rem;margin-top:2px">Give users an extra 3 days trial automatically.</p>
+              </div>
+              <input type="checkbox" id="flagTrialGrace">
+            </div>
+
+            <div class="flag-card">
+              <div>
+                <b>Supabase Integrations</b>
+                <p class="muted" style="font-size:.8rem;margin-top:2px">Enable visual builder db queries synchronization.</p>
+              </div>
+              <input type="checkbox" id="flagSync" checked>
+            </div>
+
+            <button class="btn btn-primary" id="saveFlagsBtn" style="width:100%;margin-top:8px">Save Flags</button>
+          </div>
+
+          <!-- Broadcast Announcement -->
+          <div class="card">
+            <h3 style="margin-bottom:16px">Broadcast Notification</h3>
+            <p class="muted" style="font-size:.85rem;margin-bottom:14px">Send a platform-wide notification alert to all logged-in store owners.</p>
+            
+            <form id="broadcastForm">
+              <div style="margin-bottom:12px">
+                <label class="td-sub" style="text-transform:uppercase;font-weight:700">Notification Title</label>
+                <input class="input" id="bcTitle" placeholder="Platform Update" required style="margin-top:4px">
+              </div>
+              <div style="margin-bottom:14px">
+                <label class="td-sub" style="text-transform:uppercase;font-weight:700">Message Content</label>
+                <textarea class="textarea" id="bcMessage" placeholder="We have added custom domain mapping..." rows="3" required style="margin-top:4px"></textarea>
+              </div>
+              <button class="btn btn-primary" type="submit" style="width:100%">⚡ Broadcast announcement</button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
     </main>
   </div>
 

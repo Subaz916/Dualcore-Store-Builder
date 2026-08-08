@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domains — DualCore</title>
+  <meta name="description" content="Connect a custom domain to your DualCore store.">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+  <link rel="stylesheet" href="assets/css/responsive.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+  <style>
+    .domain-card { border:1.5px solid var(--border); border-radius:18px; padding:24px; margin-bottom:16px; transition:.2s; }
+    .domain-card:hover { border-color:var(--primary); box-shadow:0 4px 24px rgba(92,110,255,.1); }
+    .domain-card.active { border-color:var(--success); background:rgba(0,200,150,.04); }
+    .domain-tag { display:inline-flex; align-items:center; gap:6px; font-size:.82rem; font-weight:700; padding:3px 10px; border-radius:99px; }
+    .domain-tag.primary { background:rgba(92,110,255,.12); color:var(--primary); }
+    .domain-tag.custom { background:rgba(0,200,150,.12); color:var(--success); }
+    .domain-tag.pending { background:rgba(245,158,11,.12); color:#D97706; }
+    .domain-status-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px; }
+    .dns-table { width:100%; border-collapse:collapse; font-size:.87rem; margin-top:14px; }
+    .dns-table th { text-align:left; padding:10px 14px; background:var(--bg); font-size:.76rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+    .dns-table td { padding:10px 14px; border-top:1px solid var(--border); font-family:monospace; }
+    .dns-table tr:hover td { background:rgba(92,110,255,.04); }
+    .copy-cell { cursor:pointer; display:flex; align-items:center; gap:6px; }
+    .copy-cell:hover { color:var(--primary); }
+    .ssl-badge { display:inline-flex; align-items:center; gap:5px; font-size:.8rem; font-weight:700; padding:4px 10px; border-radius:99px; background:rgba(0,200,150,.12); color:var(--success); }
+    .domain-input-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+    .domain-input-row .input { flex:1; min-width:0; }
+    .verify-steps { counter-reset:step; list-style:none; padding:0; }
+    .verify-steps li { counter-increment:step; display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+    .verify-steps li:last-child { border-bottom:none; }
+    .verify-steps li::before { content:counter(step); width:30px; height:30px; border-radius:50%; background:var(--primary); color:#fff; font-weight:800; font-size:.85rem; display:grid; place-items:center; flex-shrink:0; margin-top:2px; }
+    .propagation-bar { height:8px; border-radius:99px; background:var(--border); overflow:hidden; margin-top:10px; }
+    .propagation-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--success)); border-radius:99px; transition:width 1.2s ease; }
+  </style>
+</head>
+<body class="app-page no-splash">
+  <div class="app-shell">
+    <div id="sidebarMount"></div>
+    <main class="app-main">
+      <div id="topbarMount"></div>
+
+      <div class="page-head">
+        <div>
+          <h1>Domains</h1>
+          <p class="muted">Manage your store's subdomain and custom domain</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" id="addDomainBtn">+ Connect domain</button>
+        </div>
+      </div>
+
+      <!-- Plan gate -->
+      <div class="card hidden" id="planGate" style="margin-bottom:20px;border-color:rgba(245,158,11,.4);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(92,110,255,.04))">
+        <div class="flex-between" style="flex-wrap:wrap;gap:14px">
+          <div>
+            <h3 style="margin-bottom:4px">🔒 Custom domains require a paid plan</h3>
+            <p class="muted">Upgrade to Basic (PKR 300/mo) to connect your own domain with free SSL.</p>
+          </div>
+          <a href="billing.html" class="btn btn-primary">Upgrade now</a>
+        </div>
+      </div>
+
+      <!-- Free subdomain -->
+      <h3 style="margin-bottom:12px;font-size:1rem">Your DualCore subdomain</h3>
+      <div class="domain-card active" id="subdomainCard">
+        <div class="flex-between" style="flex-wrap:wrap;gap:12px">
+          <div>
+            <div class="flex align-center gap-2" style="margin-bottom:6px">
+              <span class="domain-tag primary">FREE SUBDOMAIN</span>
+              <span class="ssl-badge">🔒 SSL</span>
+            </div>
+            <div style="font-size:1.3rem;font-weight:800" id="subdomainDisplay">mystore.dualcore.shop</div>
+            <p class="muted" style="font-size:.83rem;margin-top:4px">Your store is always accessible on this URL — even on the free plan.</p>
+          </div>
+          <div class="flex gap-2 align-center" style="flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" id="copySubdomain">📋 Copy</button>
+            <a class="btn btn-primary btn-sm" id="openSubdomain" href="#" target="_blank">↗ Open</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom domains section -->
+      <h3 style="margin-bottom:12px;font-size:1rem;margin-top:28px">Custom domains</h3>
+      <div id="customDomainsList">
+        <!-- rendered by JS -->
+      </div>
+
+      <!-- Add domain form -->
+      <div class="card" id="addDomainForm" style="margin-top:4px">
+        <h4 style="margin-bottom:14px">Connect a custom domain</h4>
+        <div class="domain-input-row">
+          <input class="input" id="newDomainInput" placeholder="shop.yourdomain.com" type="text" autocomplete="off" spellcheck="false">
+          <button class="btn btn-primary" id="connectDomainBtn">Connect →</button>
+        </div>
+        <p class="muted" style="font-size:.8rem;margin-top:8px">Enter your domain or subdomain (e.g. <code>shop.yourdomain.com</code> or <code>yourdomain.com</code>). Then add the DNS records shown below.</p>
+      </div>
+
+      <!-- DNS Instructions -->
+      <div class="card hidden" id="dnsInstructions" style="margin-top:16px">
+        <div class="flex-between" style="margin-bottom:14px">
+          <h4>DNS configuration for <span id="dnsForDomain" class="gradient-text">your domain</span></h4>
+          <button class="btn-icon" id="closeDns" style="font-size:1.2rem">×</button>
+        </div>
+        <p class="muted" style="font-size:.87rem;margin-bottom:14px">Add these records in your DNS provider (Namecheap, Cloudflare, GoDaddy, etc.):</p>
+
+        <table class="dns-table">
+          <thead>
+            <tr><th>Type</th><th>Name / Host</th><th>Value / Points to</th><th>TTL</th></tr>
+          </thead>
+          <tbody id="dnsRows">
+            <!-- rendered by JS -->
+          </tbody>
+        </table>
+
+        <div class="propagation-bar" style="margin-top:20px">
+          <div class="propagation-fill" id="propFill" style="width:0%"></div>
+        </div>
+        <p class="muted" style="font-size:.8rem;margin-top:6px" id="propText">DNS changes can take up to 48 hours to propagate worldwide.</p>
+
+        <ol class="verify-steps" style="margin-top:20px">
+          <li>
+            <div>
+              <b>Add DNS records</b>
+              <p class="muted" style="font-size:.85rem;margin-top:3px">Log into your domain registrar and add the CNAME record shown above.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Wait for propagation</b>
+              <p class="muted" style="font-size:.85rem;margin-top:3px">DNS changes usually propagate in 1–2 hours. Free SSL is issued automatically.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <b>Verify &amp; go live</b>
+              <p class="muted" style="font-size:.85rem;margin-top:3px">Click "Verify" once records are set. We'll check the DNS and activate your SSL certificate.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="flex gap-2" style="margin-top:16px;flex-wrap:wrap">
+          <button class="btn btn-primary" id="verifyDnsBtn">🔍 Verify DNS</button>
+          <button class="btn btn-ghost" id="closeDnsBtn">Done</button>
+        </div>
+      </div>
+
+      <!-- Domain health -->
+      <h3 style="margin-bottom:12px;font-size:1rem;margin-top:28px">Domain health</h3>
+      <div class="card" id="domainHealth">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+          <div class="text-center" style="padding:16px 10px">
+            <div style="font-size:2rem;margin-bottom:6px" id="healthSsl">🔒</div>
+            <b style="font-size:.95rem">SSL Certificate</b>
+            <p class="muted" style="font-size:.8rem;margin-top:4px" id="sslStatus">Active &amp; auto-renewing</p>
+          </div>
+          <div class="text-center" style="padding:16px 10px;border-left:1px solid var(--border)">
+            <div style="font-size:2rem;margin-bottom:6px">📡</div>
+            <b style="font-size:.95rem">DNS Status</b>
+            <p class="muted" style="font-size:.8rem;margin-top:4px" id="dnsStatus">Resolving correctly</p>
+          </div>
+          <div class="text-center" style="padding:16px 10px;border-left:1px solid var(--border)">
+            <div style="font-size:2rem;margin-bottom:6px">⚡</div>
+            <b style="font-size:.95rem">CDN</b>
+            <p class="muted" style="font-size:.8rem;margin-top:4px">Global edge caching</p>
+          </div>
+          <div class="text-center" style="padding:16px 10px;border-left:1px solid var(--border)">
+            <div style="font-size:2rem;margin-bottom:6px" id="healthPublish">✅</div>
+            <b style="font-size:.95rem">Store status</b>
+            <p class="muted" style="font-size:.8rem;margin-top:4px" id="publishStatus">Loading…</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/components.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/seed.js"></script>
+  <script src="assets/js/domains.js"></script>
+</body>
+</html>

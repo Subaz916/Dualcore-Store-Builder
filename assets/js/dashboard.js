@@ -241,4 +241,41 @@
       old.replaceWith(s);
     });
   })();
+
+  /* ---------- Announcements / Broadcast Notifications ---------- */
+  (async () => {
+    const container = $("#announcementContainer");
+    if (!container) return;
+    
+    let list = [];
+    if (window.supa) {
+      try {
+        const { data } = await window.supa
+          .from("notifications")
+          .select("*")
+          .eq("type", "broadcast")
+          .order("created_at", { ascending: false })
+          .limit(2);
+        list = data || [];
+      } catch (err) {}
+    }
+    
+    if (!list.length) {
+      list = Utils.store.get("dc_notifications", [])
+        .filter(n => n.type === "broadcast")
+        .slice(0, 2);
+    }
+
+    if (list.length) {
+      container.innerHTML = list.map(n => `
+        <div class="card" style="border-left:4px solid var(--primary);background:var(--primary-soft);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-radius:12px;animation:sf-fade 0.5s ease">
+          <div style="flex:1">
+            <b style="color:var(--primary);font-size:0.95rem;display:block;margin-bottom:3px">📢 ${Utils.esc(n.title)}</b>
+            <span style="font-size:0.85rem;color:var(--ink)">${Utils.esc(n.message)}</span>
+            <small class="muted" style="display:block;margin-top:4px;font-size:0.75rem">${Utils.timeAgo(n.created_at)}</small>
+          </div>
+          <button style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding-left:12px" onclick="this.parentElement.remove()">×</button>
+        </div>`).join("");
+    }
+  })();
 })();
