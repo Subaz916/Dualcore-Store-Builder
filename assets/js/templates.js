@@ -108,7 +108,7 @@ grid.querySelectorAll(".theme-use").forEach(btn => {
         Utils.store.set("dc_shop", shop);
         if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
         toast("success", `${btn.dataset.theme} theme applied — open the builder to customize.`);
-        setTimeout(() => location.href = "builder.html", 800);
+        setTimeout(() => location.href = "builder.html", 250);
       };
     });
 

@@ -42,11 +42,11 @@ const Auth = (() => {
   };
 
   const getUser = async () => {
+    // 1) mirror first (instant, local) — never bounces the user, no network wait
+    const mirror = store.get("dc_session") || store.get("dc_user");
+    if (mirror?.id) return mirror;
     await supabaseReady();
     if (window.supa) {
-      // 1) mirror first (instant, local) — never bounces the user
-      const mirror = store.get("dc_session") || store.get("dc_user");
-      if (mirror?.id) return mirror;
       // 2) ask Supabase (network) only when no mirror exists
       try {
         const { data } = await window.supa.auth.getSession();
@@ -60,6 +60,8 @@ const Auth = (() => {
   };
 
   const getSession = async () => {
+    const mirror = store.get("dc_session") || store.get("dc_user");
+    if (mirror?.id) return { user: mirror, access_token: mirror.access_token || "local" };
     await supabaseReady();
     if (window.supa) {
       try { const { data } = await window.supa.auth.getSession(); return data.session; }

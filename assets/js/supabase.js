@@ -13,6 +13,17 @@
     "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js",
   ];
 
+  // Warm the CDN connection early so the SDK arrives faster on first use.
+  try {
+    for (const host of ["https://cdn.jsdelivr.net", "https://unpkg.com", "https://vtmjewwatshbdermcpyc.supabase.co"]) {
+      const link = document.createElement("link");
+      link.rel = "preconnect";
+      link.href = host;
+      link.crossOrigin = "anonymous";
+      (document.head || document.documentElement).appendChild(link);
+    }
+  } catch {}
+
   let done = false;
   const dispatchReady = () => {
     if (done) return;
@@ -45,7 +56,7 @@
       window.supa = null;
       dispatchReady();
     }
-  }, 1200);
+  }, 650);
 
   // 3) Load SDK from CDN. On success or failure, fire dualcore:supabase-ready.
   (function syncLoad(i) {

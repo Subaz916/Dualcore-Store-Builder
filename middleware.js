@@ -18,8 +18,18 @@ function getContentType(path) {
   return 'application/octet-stream';
 }
 
+async function fetchTimeout(url, opts, ms = 4000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 async function supabaseRequest(method, path, body = null) {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1${path}`, {
+  const res = await fetchTimeout(`${SUPABASE_URL}/storage/v1${path}`, {
     method,
     headers: {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -36,7 +46,7 @@ async function supabaseRequest(method, path, body = null) {
 }
 
 async function supabaseDownload(path) {
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
+  const res = await fetchTimeout(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
     headers: {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'apikey': SUPABASE_ANON_KEY,
@@ -44,6 +54,73 @@ async function supabaseDownload(path) {
   });
   if (!res.ok) return null;
   return res;
+}
+
+// ---------- In-memory caches (fast repeat loads within a warm environment) ----------
+const SLUG_MAP_TTL = 60_000;   // slug→owner lookup cache
+const FILE_KEY_CACHE_MAX = 64; // served file cache (page bytes), short-lived
+const fileCache = new Map();   // storagePath → { ts, body, type }
+const slugMapCache = new Map(); // slug → { ts, userId }
+
+function fileCacheGet(key) {
+  const hit = fileCache.get(key);
+  if (!hit) return null;
+  return hit;
+}
+function fileCacheSet(key, body, type) {
+  const now = Date.now();
+  if (fileCache.size >= FILE_KEY_CACHE_MAX) {
+    const oldest = fileCache.entries().next().value;
+    fileCache.delete(oldest[0]);
+  }
+  fileCache.set(key, { ts: now, body, type });
+}
+function slugMapGet(slug) {
+  const hit = slugMapCache.get(slug);
+  if (!hit || Date.now() - hit.ts > SLUG_MAP_TTL) return null;
+  return hit;
+}
+
+// In-flight dedupe: only one bucket listing at a time.
+let listingPromise = null;
+async function rootFolders() {
+  if (!listingPromise) {
+    listingPromise = supabaseRequest('POST', '/object/list/', { bucket: BUCKET, prefix: '', limit: 1000 })
+      .catch(() => null)
+      .finally(() => { listingPromise = null; });
+  }
+  return listingPromise;
+}
+
+// Resolve a store slug to its owner user_id (cached for SLUG_MAP_TTL).
+async function findOwnerForSlug(slug) {
+  const hit = slugMapGet(slug);
+  if (hit) return hit.userId;
+  const listRes = await rootFolders();
+  if (!listRes?.folders) return null;
+
+  // List each user folder once (in parallel) and rebuild the slug→owner map.
+  const jobs = listRes.folders.map(async (folder) => {
+    try {
+      const userListRes = await supabaseRequest('POST', '/object/list/', {
+        bucket: BUCKET,
+        prefix: folder.name + '/',
+        limit: 100,
+      });
+      return { folder: folder.name, slugs: (userListRes?.folders || []).map(f => f.name) };
+    } catch { return null; }
+  });
+
+  const all = await Promise.all(jobs);
+  const now = Date.now();
+  for (const entry of all) {
+    if (!entry) continue;
+    for (const name of entry.slugs) {
+      slugMapCache.set(name, { ts: now, userId: entry.folder });
+    }
+  }
+  const found = slugMapGet(slug);
+  return found ? found.userId : null;
 }
 
 // App routes that should NOT be treated as store slugs
@@ -82,34 +159,22 @@ export default async function middleware(request) {
   if (!filePath || filePath.endsWith('/')) filePath += 'index.html';
 
   try {
-    // Find which user_id owns this slug by listing bucket root folders
-    const listRes = await supabaseRequest('POST', '/object/list/', {
-      bucket: BUCKET,
-      prefix: '',
-      limit: 1000,
-    });
-
-    let userId = null;
-    if (listRes?.folders) {
-      for (const folder of listRes.folders) {
-        const userListRes = await supabaseRequest('POST', '/object/list/', {
-          bucket: BUCKET,
-          prefix: folder.name + '/',
-          limit: 100,
-        });
-        if (userListRes?.folders?.some(f => f.name === slug)) {
-          userId = folder.name;
-          break;
-        }
-      }
-    }
+    // Find which user_id owns this slug (cached).
+    const userId = await findOwnerForSlug(slug);
 
     if (!userId) {
       return; // Not a store slug - let app handle (404 or SPA)
     }
 
-    // Fetch the file from Supabase Storage
+    // Fetch the file from Supabase Storage (memory-cached for fast repeats).
     const storagePath = `${userId}/${slug}/${filePath}`;
+    const hit = fileCacheGet(storagePath);
+    if (hit && Date.now() - hit.ts < 10_000) {
+      return new Response(hit.body, {
+        headers: { 'Content-Type': hit.type, 'Cache-Control': 'public, max-age=31536000, immutable' },
+      });
+    }
+
     let downloadRes = await supabaseDownload(storagePath);
 
     // If not found and it's not index.html, try index.html for SPA routes
@@ -123,6 +188,7 @@ export default async function middleware(request) {
 
     const contentType = getContentType(filePath);
     const arrayBuffer = await downloadRes.arrayBuffer();
+    fileCacheSet(storagePath, arrayBuffer, contentType);
 
     return new Response(arrayBuffer, {
       headers: {

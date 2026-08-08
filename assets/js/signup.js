@@ -44,13 +44,13 @@
       const { needsVerification } = await Auth.signUp({ email, password, name });
       if (needsVerification) {
         toast("info", "Check your inbox to verify your email, then log in.");
-        setTimeout(() => location.href = "login.html", 1600);
+        setTimeout(() => location.href = "login.html", 700);
       } else {
         // demo mode → straight to dashboard
         const user = await Auth.getUser();
         if (user) await Auth.dbNewUser(user.id);
         toast("success", "Account created! Setting up your store…");
-        setTimeout(() => location.href = "dashboard.html", 900);
+        setTimeout(() => location.href = "dashboard.html", 300);
       }
     } catch (err) {
       Components.btnLoading(btn, false);

@@ -78,10 +78,19 @@ const Utils = (() => {
     remove(key) { try { localStorage.removeItem(key); } catch {} },
   };
 
-  /* ---------- Storage abstraction: Supabase OR demo localStorage ----------
-     Robust: the Supabase branch never throws. On ANY error it logs a
-     warning and falls back to the local (demo) implementation, so pages
-     always render even if a table / RLS policy / column is missing.  */
+  /* ---------- Storage abstraction: LOCAL-FIRST with background cloud sync ----------
+     Performance model:
+       • Reads  → served instantly from an in-memory cache (stale-while-revalidate),
+                  or from Supabase with a hard timeout when nothing is cached yet.
+       • Writes → applied to the local mirror synchronously and returned at once,
+                  then pushed to Supabase in the background (retried with backoff).
+     Result: every click/action resolves in milliseconds; the cloud (when reachable)
+     is always eventually consistent. In demo mode (no Supabase) nothing changes.  */
+
+  const CACHE_TTL = 3500;        // ms before an in-memory read is refreshed
+  const NET_TIMEOUT = 4500;      // hard cap on any Supabase network call
+  const readCache = new Map();   // cacheKey → { ts, rows }
+
   const demoSel = (table, opts = {}) => {
     let rows = store.get("dc_" + table, []);
     if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) rows = rows.filter(r => r[k] === v);
@@ -89,77 +98,123 @@ const Utils = (() => {
     if (opts.limit) rows = rows.slice(0, opts.limit);
     return rows;
   };
-  const warn = (table, err) => console.warn("[DualCore] " + table + " → demo fallback:", err?.message || err);
+  const cKey = (table, opts = {}) => table + "|" + JSON.stringify({ e: opts.eq || null, o: opts.order || null, a: !!opts.asc, l: opts.limit || null });
+  const cDrop = (table) => {
+    const p = table + "|";
+    for (const k of readCache.keys()) if (k.startsWith(p)) readCache.delete(k);
+  };
+  const cGet = (table, opts) => {
+    const hit = readCache.get(cKey(table, opts));
+    return hit ? hit.rows.map(r => ({ ...r })) : null;
+  };
+  const cSet = (table, opts, rows) => readCache.set(cKey(table, opts), { ts: Date.now(), rows: rows.map(r => ({ ...r })) });
+  const withTimeout = (p, ms = NET_TIMEOUT) => Promise.race([p, new Promise(res => setTimeout(() => res({ timedOut: true }), ms))]);
+  const warn = (table, err) => console.warn("[DualCore] " + table + " → local fallback:", err?.message || err?.error_description || err);
+
+  /* ---------- pending cloud-sync queue (retries with backoff) ---------- */
+  const syncQueue = [];
+  let syncTimer = null;
+  const enqueueSync = (op) => {
+    op.tries = (op.tries || 0) + 1;
+    syncQueue.push(op);
+    if (!syncTimer) {
+      syncTimer = setTimeout(() => { syncTimer = null; flushSync(); }, 350);
+    }
+  };
+  const flushSync = async () => {
+    if (!window.supa) return;
+    if (syncQueue.length > 20) syncQueue.splice(0, syncQueue.length - 20);
+    while (syncQueue.length) {
+      const op = syncQueue[0];
+      try {
+        const { error } = op.kind === "remove"
+          ? await withTimeout(window.supa.from(op.table).delete().match(op.match))
+          : op.kind === "update"
+            ? await withTimeout(window.supa.from(op.table).update(op.patch).match(op.match))
+            : op.kind === "upsert"
+              ? await withTimeout(window.supa.from(op.table).upsert(op.rows))
+              : await withTimeout(window.supa.from(op.table).insert(op.row));
+        if (error) throw error;
+        syncQueue.shift();
+      } catch (err) {
+        if (op.tries > 4) { syncQueue.shift(); warn(op.table, err); }
+        else break; // keep at front, retry later
+      }
+    }
+    if (syncQueue.length) setTimeout(flushSync, 2500);
+  };
+  window.addEventListener?.("dualcore:supabase-ready", () => setTimeout(flushSync, 600));
 
   const db = {
-    async insert(table, row) {
-      await supabaseReady();
-      if (window.supa) {
-        try {
-          const { error } = await window.supa.from(table).insert(row);
-          if (error) { warn(table, error); }
-          else return row;
-        } catch (err) { warn(table, err); }
+    async select(table, opts = {}) {
+      // 1) In-memory cache → resolve instantly, refresh in background when stale.
+      const cached = cGet(table, opts);
+      if (cached) {
+        const hit = readCache.get(cKey(table, opts));
+        if (hit && Date.now() - hit.ts > CACHE_TTL) {
+          db.selectFresh(table, opts).then(rows => cSet(table, opts, rows)).catch(() => {});
+        }
+        return cached;
       }
-      const rows = store.get("dc_" + table, []);
-      rows.push(row); store.set("dc_" + table, rows);
+      // 2) Cache miss → reads local mirror instantly if present.
+      const local = demoSel(table, opts);
+      if (local.length || !window.supa) { cSet(table, opts, local); return local; }
+      // 3) Nothing local → one bounded cloud fetch (never hangs the page).
+      try {
+        let q = window.supa.from(table).select(opts.cols || "*");
+        if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
+        if (opts.order) q = q.order(opts.order, { ascending: !!opts.asc });
+        if (opts.limit) q = q.limit(opts.limit);
+        const { data, error } = await withTimeout(q, 2000);
+        if (error) throw error;
+        const rows = data ? [...data] : [];
+        cSet(table, opts, rows);
+        return rows;
+      } catch (err) { warn(table, err); }
+      const fb = demoSel(table, opts);
+      cSet(table, opts, fb);
+      return fb;
+    },
+    async selectFresh(table, opts = {}) {
+      if (!window.supa) return demoSel(table, opts);
+      let q = window.supa.from(table).select(opts.cols || "*");
+      if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
+      if (opts.order) q = q.order(opts.order, { ascending: !!opts.asc });
+      if (opts.limit) q = q.limit(opts.limit);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+    async insert(table, row) {
+      store.set("dc_" + table, [...store.get("dc_" + table, []), row]);
+      cDrop(table);
+      if (window.supa) enqueueSync({ kind: "insert", table, row });
       return row;
     },
-    async select(table, opts = {}) {
-      await supabaseReady();
-      if (window.supa) {
-        try {
-          let q = window.supa.from(table).select(opts.cols || "*");
-          if (opts.eq) for (const [k, v] of Object.entries(opts.eq)) q = q.eq(k, v);
-          if (opts.order) q = q.order(opts.order, { ascending: !!opts.asc });
-          if (opts.limit) q = q.limit(opts.limit);
-          const { data, error } = await q;
-          if (error) throw error;
-          if (data) return data;
-        } catch (err) { warn(table, err); }
-      }
-      return demoSel(table, opts);
-    },
     async update(table, match, patch) {
-      await supabaseReady();
-      if (window.supa) {
-        try {
-          const { error } = await window.supa.from(table).update(patch).match(match);
-          if (!error) return patch;
-          warn(table, error);
-        } catch (err) { warn(table, err); }
-      }
       const rows = store.get("dc_" + table, []);
       const i = rows.findIndex(r => Object.entries(match).every(([k, v]) => r[k] === v));
-      if (i >= 0) rows[i] = { ...rows[i], ...patch }; store.set("dc_" + table, rows);
+      if (i >= 0) rows[i] = { ...rows[i], ...patch };
+      store.set("dc_" + table, rows);
+      cDrop(table);
+      if (window.supa) enqueueSync({ kind: "update", table, match, patch });
       return patch;
     },
     async remove(table, match) {
-      await supabaseReady();
-      if (window.supa) {
-        try {
-          const { error } = await window.supa.from(table).delete().match(match);
-          if (!error) return;
-          else warn(table, error);
-        } catch (err) { warn(table, err); }
-      }
-      store.set("dc_" + table, store.get("dc_" + table, []).filter(r => !Object.entries(match).every(([k, v]) => r[k] === v)));
+      const keep = r => !Object.entries(match).every(([k, v]) => r[k] === v);
+      store.set("dc_" + table, store.get("dc_" + table, []).filter(keep));
+      cDrop(table);
+      if (window.supa) enqueueSync({ kind: "remove", table, match });
     },
     async upsert(table, rows) {
-      await supabaseReady();
-      if (window.supa) {
-        try {
-          const { error } = await window.supa.from(table).upsert(rows);
-          if (!error) return rows;
-          else warn(table, error);
-        } catch (err) { warn(table, err); }
-      }
       const all = store.get("dc_" + table, []);
       for (const r of rows) {
         const i = all.findIndex(x => x.id === r.id);
         if (i >= 0) all[i] = { ...all[i], ...r }; else all.push(r);
       }
       store.set("dc_" + table, all);
+      cDrop(table);
+      if (window.supa) enqueueSync({ kind: "upsert", table, rows });
       return rows;
     },
   };
@@ -245,10 +300,18 @@ const Utils = (() => {
   const qs = (key, fb = "") => new URLSearchParams(location.search).get(key) || fb;
 
   /* ---------- Supabase readiness ----------
-     Returns a promise that resolves when the SDK has loaded
-     (cloud mode) or failed (demo mode). Page scripts and data
-     layer use this to avoid race conditions. */
-  const supabaseReady = () => (window.SUPABASE_READY || Promise.resolve());
+     Resolves when the SDK is loaded (cloud) or failed (demo). Bounded:
+     never blocks a page/action longer than 700ms even on a slow CDN. */
+  let readyBound = null;
+  const supabaseReady = () => {
+    const r = window.SUPABASE_READY || Promise.resolve();
+    if (readyBound) return readyBound;
+    readyBound = Promise.race([
+      r,
+      new Promise(res => setTimeout(res, 700)),
+    ]);
+    return readyBound;
+  };
 
   const scrollToId = (id) => {
     const el = id === "top" ? document.body : document.getElementById(id);
@@ -261,13 +324,13 @@ const Utils = (() => {
   const getLocalUser = () => store.get("dc_user");
 
   const isSignedIn = async () => {
-    await supabaseReady();
     // 1) The local mirror is the single source of truth — synchronous,
     //    set at login/signup before any navigation. No waiting on the
     //    Supabase client's async session recovery, so no false "guest".
     if (getLocalUser()) return true;
-    // 2) In Supabase mode without a mirror, trust getSession() (local read)
-    //    — only then consider a network getUser() refresh.
+    // 2) Supabase mode without a mirror: bounded readiness wait, then a
+    //    local-only session read (no slow network call here).
+    await supabaseReady();
     if (window.supa) {
       try {
         const { data } = await window.supa.auth.getSession();

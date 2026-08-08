@@ -24,7 +24,7 @@
 
     try {
       Components.btnLoading(btn, true, { keepText: true });
-      await new Promise(r => setTimeout(r, 700)); // simulate send
+      await new Promise(r => setTimeout(r, 300)); // simulate send
       Components.btnLoading(btn, false);
       toast("success", "Message sent! We'll reply within one business day.");
       form.reset();

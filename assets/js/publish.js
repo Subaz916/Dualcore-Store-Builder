@@ -65,13 +65,11 @@
     try {
       // 1. Generate
       log(`Building storefront for "${shop.name || "My Store"}"…`, "warn");
-      await wait(600);
       const files = StoreGenerator.build(sections, shop, products);
       log(`${Object.keys(files).length} files generated (${Math.round(JSON.stringify(files).length / 1024)} KB)`, "ok");
 
       // 2. Upload (folder: storefronts/<user_id>/<slug>/... per storage policies)
       log(`Uploading to supabase://${APP_CONFIG.STORAGE_BUCKET}/${user.id}/${slug}/…`, "warn");
-      await wait(700);
       let uploaded = 0;
       if (window.supa) {
         try {
@@ -81,14 +79,20 @@
             const { error } = await window.supa.storage.createBucket(bucket, { public: true });
             if (error) throw error;
           }
-          for (const [path, content] of Object.entries(files)) {
-            const { error } = await window.supa.storage.from(bucket).upload(user.id + "/" + slug + "/" + path, content, {
-              upsert: true, contentType: path.endsWith(".html") ? "text/html" : path.endsWith(".css") ? "text/css" : path.endsWith(".js") ? "text/javascript" : "application/xml",
-            });
-            if (error) throw error;
-            uploaded++;
-            if (uploaded % 4 === 0) log(`Uploaded ${uploaded}/${Object.keys(files).length}…`);
-          }
+          const entries = Object.entries(files);
+          const CONCURRENCY = 4;
+          const workers = Array.from({ length: Math.min(CONCURRENCY, entries.length) }, async () => {
+            while (entries.length) {
+              const [fpath, content] = entries.shift();
+              const { error: upErr } = await window.supa.storage.from(bucket).upload(user.id + "/" + slug + "/" + fpath, content, {
+                upsert: true, contentType: fpath.endsWith(".html") ? "text/html" : fpath.endsWith(".css") ? "text/css" : fpath.endsWith(".js") ? "text/javascript" : "application/xml",
+              });
+              if (upErr) throw upErr;
+              uploaded++;
+              if (uploaded % 4 === 0) log(`Uploaded ${uploaded}/${Object.keys(files).length}…`);
+            }
+          });
+          await Promise.all(workers);
         } catch (err) {
           log("Supabase upload failed: " + err.message, "warn");
           log("Falling back to local export mode…", "warn");
@@ -104,7 +108,6 @@
 
       // 3. SEO + status
       log("Writing robots.txt, sitemap.xml, SEO meta…", "ok");
-      await wait(500);
       const publishedAt = new Date().toISOString();
       Utils.db.update("stores", { id: shop.id }, {
         status: "published", published_at: publishedAt, slug,

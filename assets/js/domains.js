@@ -226,7 +226,7 @@
         if (propFill) propFill.style.width = "75%";
         if (propText) propText.textContent = "Checking DNS propagation (75%)...";
         
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 450));
         
         if (propFill) propFill.style.width = "100%";
         if (propText) propText.textContent = "DNS verified and SSL active (100% propagated) ✅";

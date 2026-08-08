@@ -74,7 +74,7 @@
         // Store template in localStorage for builder to pick up
         Utils.store.set("dc_selected_template", templateId);
         toast("success", `Loading ${template.name} template...`);
-        setTimeout(() => location.href = "builder.html", 500);
+        setTimeout(() => location.href = "builder.html", 200);
       };
     });
 

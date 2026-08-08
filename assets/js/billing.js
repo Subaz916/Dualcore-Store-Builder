@@ -123,7 +123,7 @@
       e.preventDefault();
       const btn = $("#payBtn");
       Components.btnLoading(btn, true);
-      await new Promise(r => setTimeout(r, 900)); // simulate gateway
+      await new Promise(r => setTimeout(r, 400)); // simulate gateway
       const now = new Date();
       const end = new Date(now.getTime() + 30 * 864e5);
       const updated = {

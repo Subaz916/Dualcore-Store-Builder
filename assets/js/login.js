@@ -39,7 +39,7 @@
         }
       }
       toast("success", "Logged in! Taking you to your dashboard…");
-      setTimeout(() => location.href = "dashboard.html", 700);
+      setTimeout(() => location.href = "dashboard.html", 250);
     } catch (err) {
       Components.btnLoading(btn, false);
       toast("error", err.message || "Login failed.");
