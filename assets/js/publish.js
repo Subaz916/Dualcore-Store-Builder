@@ -16,14 +16,23 @@
   const sub = await Auth.getSubscription(user.id);
 
   const slug = shop.slug || Utils.toSlug(shop.name || "mystore") || "mystore";
-  const domain = "https://dualcore-store-builder.vercel.app/" + slug;
+
+  /* The store is hosted by this very app: the Vercel middleware in
+     middleware.js serves /<slug>/... from Supabase Storage. So the live URL
+     is built from wherever the app is actually deployed (works on the Vercel
+     preview/production, a custom deploy or a custom domain) — not a
+     hardcoded host that may not exist. */
+  const liveOrigin = /^https?:/.test(location.origin) ? location.origin : "http://localhost:3000";
+  const customDomain = (shop.custom_domain || "").replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const domain = customDomain ? "https://" + customDomain : liveOrigin + "/" + slug;
 
   $("#publishStoreName").textContent = shop.name || "My Store";
-  $("#publishUrl").childNodes[0].nodeValue = domain + " ";
-  $("#stepUrl").textContent = domain;
+  $("#publishUrlLink").href = domain;
+  $("#publishUrlLink").textContent = domain;
+  $("#stepUrl").innerHTML = `<a href="${domain}" target="_blank" rel="noopener">${domain}</a>`;
   $("#copyUrl").onclick = async () => {
-    await Utils.copy("https://" + domain);
-    toast("success", "URL copied to clipboard");
+    await Utils.copy(domain);
+    toast("success", "Live URL copied to clipboard");
   };
 
   /* ---- Plan lock ---- */
@@ -49,6 +58,19 @@
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
   /* ---- Main publish flow ---- */
+  const verifyLive = async (url) => {
+    // Real reachability check — the site must actually answer HTML.
+    try {
+      const res = await fetch(url, { redirect: "follow", cache: "no-store", headers: { Range: "bytes=0-1024" } });
+      if (!res.ok) return { ok: false, detail: "HTTP " + res.status };
+      const type = (res.headers.get("content-type") || "").toLowerCase();
+      if (!type.includes("html")) return { ok: false, detail: "Not an HTML page (" + (type || "no content-type") + ")" };
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, detail: "Network error: " + (err.message || err) };
+    }
+  };
+
   $("#publishBtn").onclick = async () => {
     if (!allowed) {
       toast("warn", "Upgrade to a paid plan to publish your store.");
@@ -69,7 +91,7 @@
       log(`${Object.keys(files).length} files generated (${Math.round(JSON.stringify(files).length / 1024)} KB)`, "ok");
 
       // 2. Upload (folder: storefronts/<user_id>/<slug>/... per storage policies)
-      log(`Uploading to supabase://${APP_CONFIG.STORAGE_BUCKET}/${user.id}/${slug}/…`, "warn");
+      log(`Uploading to storage ${APP_CONFIG.STORAGE_BUCKET}/${user.id}/${slug}/…`, "warn");
       let uploaded = 0;
       if (window.supa) {
         try {
@@ -94,19 +116,35 @@
           });
           await Promise.all(workers);
         } catch (err) {
-          log("Supabase upload failed: " + err.message, "warn");
-          log("Falling back to local export mode…", "warn");
+          log("Storage upload failed: " + err.message, "warn");
           uploaded = 0;
         }
       }
-      if (!window.supa || !uploaded) {
-        log("Demo mode: exporting storefront bundle to localStorage…");
-        Utils.store.set("dc_published_" + slug, files);
-        uploaded = Object.keys(files).length;
-      }
-      log(`Upload complete: ${uploaded} files`, "ok");
 
-      // 3. SEO + status
+      // 3. Verify the store is actually reachable on the live URL.
+      let live = false;
+      if (uploaded) {
+        log("Verifying live site answers…", "warn");
+        const probe = await verifyLive(domain);
+        live = probe.ok;
+        if (live) log("✓ Live site answered with HTML", "ok");
+        else log("Files uploaded to storage — the live URL did not answer yet: " + probe.detail, "warn");
+      }
+
+      if (!uploaded) {
+        log("No storage connection — saving the bundle to this browser only.", "warn");
+        Utils.store.set("dc_published_" + slug, files);
+        $("#deployStatus").textContent = "Saved locally";
+        $("#deployStatus").className = "badge badge-ghost";
+        btn.disabled = false;
+        btn.innerHTML = "⚡ Try publish again";
+        toast("warn", "Saved to this browser — connect storage (Supabase) to really go live.");
+        Utils.db.update("stores", { id: shop.id }, { status: "draft" }).catch(() => {});
+        Utils.store.set("dc_shop", { ...shop, status: "draft" });
+        return;
+      }
+
+      // 4. SEO + status — files are really in storage; mark live when verified.
       log("Writing robots.txt, sitemap.xml, SEO meta…", "ok");
       const publishedAt = new Date().toISOString();
       Utils.db.update("stores", { id: shop.id }, {
@@ -114,14 +152,15 @@
       }).catch(() => {});
       Utils.store.set("dc_shop", { ...shop, status: "published", published_at: publishedAt });
 
-      // 4. Done
-      log(`🎉 Store is LIVE at ${domain}`, "ok");
-      $("#deployStatus").textContent = "Published ✓";
-      $("#deployStatus").className = "badge badge-success";
+      // 5. Done — real URL, really hosted.
+      if (live) log(`🎉 Store is LIVE at ${domain}`, "ok");
+      else log(`Files live in storage — open ${domain} to see your store (Vercel edge middleware serves it)`, "warn");
+      $("#deployStatus").textContent = live ? "Published ✓" : "Uploaded ⏳";
+      $("#deployStatus").className = live ? "badge badge-success" : "badge badge-warn";
       btn.disabled = false;
       btn.innerHTML = "⚡ Republish";
 
-      toast("success", "Your store is live! 🎉");
+      toast("success", live ? "Your store is live! 🎉" : "Store uploaded — verify the live URL when ready.");
       Utils.store.set("dc_published_at", publishedAt);
       $("#previewStoreBtn").classList.remove("hidden");
     } catch (err) {
