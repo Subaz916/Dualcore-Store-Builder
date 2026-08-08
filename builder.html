@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="assets/css/builder.css">
   <link rel="stylesheet" href="assets/css/responsive.css">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6EFF' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2 3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E">
+  <style id="sfStoreCss"></style>
   <style>
     /* ---- Builder-specific overrides ---- */
     .builder-shell {
@@ -279,6 +280,11 @@
     .theme-field label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 6px; color: var(--muted); }
     .theme-field .select, .theme-field .input { width: 100%; }
     .color-preview { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); }
+    .theme-hint {
+      font-size: .78rem; color: var(--muted); background: rgba(92,110,255,.07);
+      border: 1px dashed rgba(92,110,255,.3); border-radius: 10px;
+      padding: 10px 12px; margin-bottom: 16px; line-height: 1.5;
+    }
 
     /* ---- Filter chips ---- */
     .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -329,7 +335,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:12px">
         <div>
           <h1 style="font-size:1.1rem;margin:0">Store Builder</h1>
-          <p class="muted" style="font-size:.8rem;margin:0">Drag sections · customize theme · publish</p>
+          <p class="muted" style="font-size:.8rem;margin:0">Drag sections · change colors · publish</p>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <button class="btn btn-ghost" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
@@ -352,8 +358,7 @@
         <div class="builder-left">
           <div class="builder-tabs" id="builderTabs">
             <button class="tab active" data-panel="sections">Sections</button>
-            <button class="tab" data-panel="theme">Theme</button>
-            <button class="tab" data-panel="templates">Templates</button>
+            <button class="tab" data-panel="theme">Colors</button>
             <button class="tab" data-panel="settings">Settings</button>
           </div>
 
@@ -365,13 +370,17 @@
 
           <!-- Theme panel -->
           <div class="builder-panel" id="panelTheme">
-            <div class="theme-field">
-              <label>Theme preset</label>
-              <select class="select" id="themeSelect"></select>
+            <div class="theme-hint">
+              DualCore uses one clean, modern layout. Change the accent color,
+              font, corner radius and button style — everything updates live
+              on your store.
             </div>
             <div class="theme-field">
-              <label>Primary color</label>
-              <input type="color" class="input" id="themePrimary" style="height:44px;padding:4px">
+              <label>Accent color <span style="text-transform:none;font-weight:400" id="themePrimaryLabel"></span></label>
+              <div class="flex gap-1 align-center">
+                <input type="color" class="input" id="themePrimary" style="height:44px;padding:4px;width:64px">
+                <input type="text" class="input" id="themePrimaryHex" style="flex:1;text-transform:uppercase" value="#5C6EFF" maxlength="7">
+              </div>
             </div>
             <div class="theme-field">
               <label>Font family</label>
@@ -389,14 +398,7 @@
                 <option value="sharp">Sharp</option>
               </select>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:4px" id="applyTheme">Apply Theme</button>
-          </div>
-
-          <!-- Templates panel -->
-          <div class="builder-panel" id="panelTemplates">
-            <input class="input" type="search" placeholder="Search templates…" id="tmplSearch" style="margin-bottom:10px;width:100%">
-            <div class="filter-chips" id="tmplFilters"></div>
-            <div id="tmplGrid"></div>
+            <button class="btn btn-primary" style="width:100%;margin-top:4px" id="applyTheme">Save colors</button>
           </div>
 
           <!-- Settings panel -->
@@ -432,7 +434,7 @@
                 <div class="canvas-empty" id="canvasEmpty">
                   <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
                   <h3>Your store is empty</h3>
-                  <p>Drag sections from the left panel or pick a template to start building</p>
+                  <p>Click a section below to add it to your store</p>
                 </div>
               </div>
             </div>

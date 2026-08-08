@@ -129,7 +129,7 @@
 
   const autosave = Utils.debounce(() => { save(); toast("info", "Auto-saved ✓"); }, 1400);
 
-  /* ---------- Section library ---------- */
+/* ---------- Section library ---------- */
   const renderLibrary = () => {
     const wrap = $("#sectionLibrary");
     wrap.innerHTML = LIBRARY.map(g => `
@@ -143,8 +143,18 @@
             <div class="lib-label">${i.label}</div>
             <div class="lib-desc">${i.desc}</div>
           </div>
+          <span style="margin-left:auto;font-size:.7rem;font-weight:700;color:var(--primary);opacity:.7">+ Add</span>
         </div>`).join("")}
     `).join("");
+
+    // Click to add (in addition to drag & drop)
+    wrap.querySelectorAll(".lib-item").forEach(item => {
+      item.style.cursor = "pointer";
+      item.addEventListener("click", () => {
+        const s = addSectionAt(item.dataset.type);
+        toast("success", `${defaultTitle(s.type)} added`);
+      });
+    });
   };
 
   const newSection = (type) => {
@@ -162,6 +172,14 @@
       footer: { title: "Footer", description: "Beautiful products, delivered fast. Built with DualCore." },
     };
     return { ...base, ...(seed[type] || {}) };
+  };
+
+  const addSectionAt = (type, index = sections.length) => {
+    const s = newSection(type);
+    sections.splice(index, 0, s);
+    pushHistory(); renderCanvas(); autosave();
+    selectSection(s.id);
+    return s;
   };
 
   const defaultTitle = (t) => ({ hero: "Hero", products: "Products", categories: "Categories", testimonials: "Testimonials", gallery: "Gallery", video: "Video", faq: "FAQ", newsletter: "Newsletter", contact: "Contact", footer: "Footer" }[t] || "Section");
@@ -188,7 +206,7 @@
         <div class="canvas-empty" id="canvasEmpty">
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
           <h3>Your store is empty</h3>
-          <p>Drag sections from the left panel or pick a template to start building</p>
+          <p>Click a section in the left panel to add it to your store</p>
         </div>`;
       return;
     }
@@ -522,13 +540,16 @@
     frame.className = "builder-device-frame " + d;
   };
 
-  /* ---------- Theme ---------- */
+  /* ---------- Theme (single layout, colors are user-editable) ---------- */
   const renderThemeControls = () => {
-    const shop = Utils.store.get("dc_shop") || { theme: "minimal" };
-    const select = $("#themeSelect");
-    select.innerHTML = Storefront.THEMES.map(t => `<option value="${t.slug}" ${shop.theme === t.slug ? "selected" : ""}>${t.name}</option>`).join("");
-    const theme = Storefront.getTheme(shop.theme);
-    $("#themePrimary").value = shop.theme_color || theme.accent;
+    const shop = Utils.store.get("dc_shop") || {};
+    const th = Storefront.getTheme();
+    const accent = shop.theme_color || th.accent;
+    $("#themePrimary").value = accent;
+    const hex = $("#themePrimaryHex");
+    if (hex) hex.value = accent.toUpperCase();
+    const label = $("#themePrimaryLabel");
+    if (label) label.textContent = accent;
     const fontSelect = $("#themeFont");
     fontSelect.innerHTML = [
       "Inter, sans-serif",
@@ -542,29 +563,40 @@
       "Nunito, sans-serif",
       "Sora, sans-serif",
       "Oswald, sans-serif",
-      "Great Vibes, cursive",
       "Baloo 2, sans-serif",
       "Cinzel, serif",
       "Manrope, sans-serif",
-      "Avenir Next, sans-serif",
-      "Didot, serif",
-    ].map(f => `<option value="${f}" ${(shop.theme_font || theme.font) === f ? "selected" : ""}>${f.split(",")[0]}</option>`).join("");
+    ].map(f => `<option value="${f}" ${(shop.theme_font || th.font) === f ? "selected" : ""}>${f.split(",")[0]}</option>`).join("");
     $("#themeRadius").value = shop.theme_radius || "16";
     $("#themeRadiusVal").textContent = shop.theme_radius || "16";
     $("#themeButtonStyle").value = shop.theme_button_style || "rounded";
   };
 
+  const persistTheme = () => {
+    const shop = Utils.store.get("dc_shop") || {};
+    Utils.store.set("dc_shop", shop);
+    if (shop.id) Utils.db.update("stores", { id: shop.id }, {
+      theme_color: shop.theme_color, theme_font: shop.theme_font,
+      theme_radius: shop.theme_radius, theme_button_style: shop.theme_button_style,
+    }).catch(() => {});
+  };
+
   const applyThemeToCanvas = () => {
-    const shop = Utils.store.get("dc_shop") || { theme: "minimal" };
-    const th = Storefront.getTheme(shop.theme);
+    const shop = Utils.store.get("dc_shop") || {};
     const canvas = $("#builderCanvas");
     if (!canvas) return;
-    canvas.style.setProperty("--t-accent", shop.theme_color || th.accent);
-    canvas.style.setProperty("--t-soft", shop.theme_soft || th.soft);
-    canvas.style.setProperty("--t-font", shop.theme_font || th.font);
-    canvas.style.setProperty("--t-radius", (shop.theme_radius || "16") + "px");
-    canvas.style.fontFamily = shop.theme_font || th.font;
-    canvas.style.setProperty("--btn-radius", shop.theme_button_style === "sharp" ? "0" : shop.theme_button_style === "pill" ? "999px" : "var(--t-radius)");
+    // Load the real storefront design system into the builder canvas
+    // so sections look exactly like the published website.
+    const styleEl = document.getElementById("sfStoreCss");
+    if (styleEl) {
+      styleEl.textContent = Storefront.cssForShop(shop);
+      const th = Storefront.resolveTheme(shop);
+      canvas.style.setProperty("--t-accent", th.accent);
+      canvas.style.setProperty("--t-soft", th.soft);
+      canvas.style.setProperty("--t-radius", th.radius + "px");
+      canvas.style.fontFamily = th.font;
+      canvas.style.setProperty("--btn-radius", th.buttonStyle === "sharp" ? "4px" : th.buttonStyle === "pill" ? "999px" : "var(--t-radius)");
+    }
   };
 
   /* ---------- Init ---------- */
@@ -594,13 +626,12 @@
         Utils.$("#canvasToggle").onclick = () => Utils.$("#builderSidebar").classList.toggle("open");
       }
 
+      loadState();
+
       const selectedTemplateId = Utils.store.get("dc_selected_template");
       if (selectedTemplateId) {
         const template = DemoData.getTemplate(selectedTemplateId);
         if (template) {
-          shop.theme = template.theme;
-          Utils.store.set("dc_shop", shop);
-          if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
           sections = template.sections.map((s) => ({
             id: Utils.uid(),
             type: s.type,
@@ -609,14 +640,11 @@
             ...s
           }));
           Utils.store.set("dc_builder_sections", sections);
-          toast("success", `${template.name} template loaded!`);
+          toast("success", `${template.name} layout loaded — now pick your colors`);
           Utils.store.remove("dc_selected_template");
         }
-      } else {
-        loadState();
       }
 
-      renderBuilderTemplates();
       renderLibrary();
       renderThemeControls();
       applyThemeToCanvas();
@@ -646,6 +674,42 @@
 
       $("#themeRadius").addEventListener("input", (e) => {
         $("#themeRadiusVal").textContent = e.target.value;
+        const shop = Utils.store.get("dc_shop") || {};
+        shop.theme_radius = e.target.value;
+        Utils.store.set("dc_shop", shop);
+        applyThemeToCanvas();
+        autosaveTheme();
+      });
+
+      // Live color editing — updates the store preview instantly
+      const syncColorFrom = (val) => {
+        const color = String(val || "#5C6EFF").trim();
+        if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) return;
+        const shop = Utils.store.get("dc_shop") || {};
+        shop.theme_color = color;
+        Utils.store.set("dc_shop", shop);
+        $("#themePrimary").value = color;
+        $("#themePrimaryHex").value = color.toUpperCase();
+        $("#themePrimaryLabel").textContent = color;
+        applyThemeToCanvas();
+        autosaveTheme();
+      };
+      const autosaveTheme = Utils.debounce(() => { persistTheme(); }, 600);
+      $("#themePrimary").addEventListener("input", (e) => { $("#themePrimaryHex").value = e.target.value.toUpperCase(); $("#themePrimaryLabel").textContent = e.target.value; syncColorFrom(e.target.value); });
+      $("#themePrimaryHex").addEventListener("input", (e) => syncColorFrom(e.target.value));
+      $("#themeFont").addEventListener("change", (e) => {
+        const shop = Utils.store.get("dc_shop") || {};
+        shop.theme_font = e.target.value;
+        Utils.store.set("dc_shop", shop);
+        applyThemeToCanvas();
+        autosaveTheme();
+      });
+      $("#themeButtonStyle").addEventListener("change", (e) => {
+        const shop = Utils.store.get("dc_shop") || {};
+        shop.theme_button_style = e.target.value;
+        Utils.store.set("dc_shop", shop);
+        applyThemeToCanvas();
+        autosaveTheme();
       });
 
       // tab switching
@@ -678,16 +742,15 @@
 
       $("#applyTheme").onclick = () => {
         const shop3 = Utils.store.get("dc_shop") || {};
-        shop3.theme = $("#themeSelect").value;
-        shop3.theme_color = $("#themePrimary").value;
+        syncColorFrom($("#themePrimaryHex").value || $("#themePrimary").value);
         shop3.theme_font = $("#themeFont").value;
         shop3.theme_radius = $("#themeRadius").value;
         shop3.theme_button_style = $("#themeButtonStyle").value;
         Utils.store.set("dc_shop", shop3);
-        Utils.db.update("stores", { id: shop3.id }, { theme: shop3.theme }).catch(() => {});
-        toast("success", "Theme applied — preview updated");
         applyThemeToCanvas();
         renderCanvas();
+        persistTheme();
+        toast("success", "Colors saved to your store");
       };
 
       $("#saveSettings").onclick = async () => {
@@ -721,118 +784,6 @@
       save();
     } catch (err) {
       console.error("Init failed:", err);
-    }
-  };
-
-  /* ---------- Builder Templates ---------- */
-  const renderBuilderTemplates = () => {
-    const TEMPLATES = DemoData.getTemplates();
-    const categories = ["all", ...new Set(TEMPLATES.map(t => t.category))];
-    
-    const wrapFilters = $("#tmplFilters");
-    if(wrapFilters) {
-      wrapFilters.innerHTML = categories.map(c => 
-        `<button class="chip ${c === 'all' ? 'active' : ''}" data-cat="${c}">${c}</button>`
-      ).join("");
-
-      wrapFilters.querySelectorAll(".chip").forEach(ch => {
-        ch.onclick = () => {
-          wrapFilters.querySelectorAll(".chip").forEach(x => x.classList.remove("active"));
-          ch.classList.add("active");
-          renderTemplateGrid(ch.dataset.cat, $("#tmplSearch")?.value || "");
-        };
-      });
-    }
-
-    const renderTemplateGrid = (cat = "all", q = "") => {
-      const grid = $("#tmplGrid");
-      if(!grid) return;
-      const list = TEMPLATES.filter(t => {
-        const matchCat = cat === "all" || t.category === cat;
-        const matchQ = t.name.toLowerCase().includes(q.toLowerCase()) || t.description.toLowerCase().includes(q.toLowerCase());
-        return matchCat && matchQ;
-      });
-
-      grid.innerHTML = list.map(t => {
-        const theme = Storefront.getTheme(t.theme);
-        return `
-        <div class="tmpl-card" data-template="${t.id}">
-          <div class="tmpl-thumb" style="background:linear-gradient(135deg, ${theme.soft}, ${theme.accent}22)">
-            <div>${t.thumbnail}</div>
-          </div>
-          <div class="tmpl-body">
-            <div class="tmpl-name">${t.name}</div>
-            <div class="tmpl-desc">${t.description}</div>
-            <div class="tmpl-actions">
-              <button class="btn btn-primary btn-sm btn-use" data-template="${t.id}">Use</button>
-              <button class="btn btn-ghost btn-sm btn-preview" data-template="${t.id}">Preview</button>
-            </div>
-          </div>
-        </div>`;
-      }).join("");
-
-      grid.querySelectorAll(".btn-use").forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const tid = btn.dataset.template;
-          const template = DemoData.getTemplate(tid);
-          if (!template) return;
-          Components.confirmDialog({
-            title: "Load template?",
-            message: `Do you want to load the "${template.name}" template? This will replace your current section layout.`,
-            confirmText: "Load"
-          }).then(ok => {
-            if (!ok) return;
-            const shop = Utils.store.get("dc_shop") || {};
-            shop.theme = template.theme;
-            Utils.store.set("dc_shop", shop);
-            if (shop.id) Utils.db.update("stores", { id: shop.id }, { theme: shop.theme }).catch(() => {});
-
-            sections = template.sections.map(s => ({
-              id: Utils.uid(),
-              type: s.type,
-              title: s.title,
-              visible: s.visible !== false,
-              ...s
-            }));
-            pushHistory();
-            renderCanvas();
-            applyThemeToCanvas();
-            renderThemeControls();
-            save();
-            toast("success", `Loaded template "${template.name}"`);
-          });
-        };
-      });
-
-      grid.querySelectorAll(".btn-preview").forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const template = DemoData.getTemplate(btn.dataset.template);
-          if (!template) return;
-          const templateSections = template.sections.map(s => ({
-            id: Utils.uid(),
-            type: s.type,
-            title: s.title,
-            visible: s.visible !== false,
-            ...s
-          }));
-          const html = Storefront.renderPage(templateSections, { name: "Preview", tagline: template.name, theme: template.theme });
-          const w = window.open("", "_blank", "width=1200,height=800");
-          if (w) { w.document.open(); w.document.write(html); w.document.close(); }
-          else toast("warn", "Pop-up blocked — allow pop-ups for preview");
-        };
-      });
-    };
-
-    renderTemplateGrid();
-    
-    const searchInput = $("#tmplSearch");
-    if(searchInput) {
-      searchInput.addEventListener("input", Utils.debounce(e => {
-        const active = $("#tmplFilters .chip.active")?.dataset?.cat || "all";
-        renderTemplateGrid(active, e.target.value);
-      }, 200));
     }
   };
 

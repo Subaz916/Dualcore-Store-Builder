@@ -35,7 +35,7 @@
     });
 
     grid.innerHTML = list.map(t => {
-      const theme = Storefront.getTheme(t.theme);
+      const theme = Storefront.resolveTheme({});
       return `
       <div class="card card-hover theme-card reveal" data-template="${t.id}" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
         <div class="theme-preview" style="background:linear-gradient(135deg, ${theme.soft}, ${theme.accent}22);padding:24px;text-align:center;position:relative;min-height:200px;display:flex;flex-direction:column;justify-content:center;align-items:center">
@@ -50,7 +50,7 @@
           <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border)">
             <div class="flex gap-2" style="margin-bottom:10px">
               <span class="badge badge-ghost" style="font-size:.7rem">${t.sections.length} sections</span>
-              <span class="badge badge-ghost" style="font-size:.7rem">${t.theme} theme</span>
+              <span class="badge badge-ghost" style="font-size:.7rem">starter layout</span>
             </div>
             <div class="flex gap-8" style="flex-wrap:wrap;margin-bottom:14px">
               ${t.sections.slice(0, 5).map(s => `<span class="badge badge-ghost" style="font-size:.65rem">${s.type}</span>`).join("")}
@@ -82,7 +82,7 @@
       btn.onclick = () => {
         const template = DemoData.getTemplate(btn.dataset.template);
         if (!template) return;
-        const th = Storefront.getTheme(template.theme);
+        const th = Storefront.resolveTheme({});
         // Build sections from template
         const sections = template.sections.map((s, i) => ({
           id: Utils.uid(),
